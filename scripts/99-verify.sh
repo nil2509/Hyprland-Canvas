@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
+# ============================================================
+# openSUSE Hyprland Desktop Bootstrap
+# 99-verify.sh
+# ============================================================
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 source "$SCRIPT_DIR/00-preflight.sh"
 
 log "Running final installation verification..."
 
 FAILED=0
 
-pass() {
-    printf '  [OK]   %s\n' "$*"
-}
+# ------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------
 
-warn() {
-    printf '  [WARN] %s\n' "$*"
+pass() {
+    printf '  [PASS] %s\n' "$*"
 }
 
 fail() {
@@ -21,196 +28,183 @@ fail() {
     FAILED=1
 }
 
-check_command() {
-    local command_name="$1"
-
-    if command -v "$command_name" >/dev/null 2>&1; then
-        pass "$command_name is installed."
-    else
-        fail "$command_name was not found."
-    fi
-}
-
-check_file() {
-    local file_path="$1"
-    local description="$2"
-
-    if [[ -f "$file_path" ]]; then
-        pass "$description"
-    else
-        fail "$description"
-    fi
+warn() {
+    printf '  [WARN] %s\n' "$*"
 }
 
 # ------------------------------------------------------------
 # Required commands
 # ------------------------------------------------------------
 
-printf '\n'
 log "Checking required commands..."
 
-check_command Hyprland
-check_command uwsm
-check_command dms
-check_command quickshell
-check_command kitty
-check_command sddm
-check_command systemctl
+REQUIRED_COMMANDS=(
+    Hyprland
+    uwsm
+    dms
+    quickshell
+    kitty
+    sddm
+    systemctl
+)
+
+for command_name in "${REQUIRED_COMMANDS[@]}"; do
+    if command -v "$command_name" >/dev/null 2>&1; then
+        pass "$command_name is available."
+    else
+        fail "$command_name was not found."
+    fi
+done
 
 # ------------------------------------------------------------
-# SDDM
+# SDDM configuration
 # ------------------------------------------------------------
 
-printf '\n'
 log "Checking SDDM configuration..."
 
 SDDM_CONF="/etc/sddm.conf.d/10-hyprland.conf"
 
-if sudo test -f "$SDDM_CONF"; then
+if [[ -f "$SDDM_CONF" ]]; then
     pass "SDDM configuration exists: $SDDM_CONF"
 else
-    fail "SDDM configuration is missing: $SDDM_CONF"
+    fail "SDDM configuration was not found: $SDDM_CONF"
 fi
 
-if sudo grep -q '^DisplayServer=wayland$' "$SDDM_CONF" 2>/dev/null; then
-    pass "SDDM is configured to use the Wayland display server."
+if [[ -f "$SDDM_CONF" ]] &&
+   sudo grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
+    pass "SDDM is configured to use a Wayland display server."
 else
-    fail "SDDM configuration does not contain DisplayServer=wayland."
+    fail "SDDM Wayland configuration is missing."
 fi
 
-if systemctl is-enabled sddm.service >/dev/null 2>&1; then
+if systemctl is-enabled --quiet sddm.service; then
     pass "SDDM is enabled."
 else
     fail "SDDM is not enabled."
 fi
 
 # ------------------------------------------------------------
-# Hyprland UWSM session
+# Hyprland / UWSM session
 # ------------------------------------------------------------
 
-printf '\n'
 log "Checking Hyprland UWSM session..."
 
-UWSM_SESSION="/usr/share/wayland-sessions/hyprland-uwsm.desktop"
+WAYLAND_SESSION_DIR="/usr/share/wayland-sessions"
+
+HYPRLAND_SESSION="$WAYLAND_SESSION_DIR/hyprland.desktop"
+UWSM_SESSION="$WAYLAND_SESSION_DIR/hyprland-uwsm.desktop"
+
+if [[ -f "$HYPRLAND_SESSION" ]]; then
+    pass "Hyprland session exists: $HYPRLAND_SESSION"
+else
+    fail "Hyprland session was not found: $HYPRLAND_SESSION"
+fi
 
 if [[ -f "$UWSM_SESSION" ]]; then
-    pass "Hyprland UWSM session exists."
+    pass "UWSM Hyprland session exists: $UWSM_SESSION"
 else
-    fail "Hyprland UWSM session is missing: $UWSM_SESSION"
+    fail "UWSM Hyprland session was not found: $UWSM_SESSION"
 fi
 
-if [[ -f "$UWSM_SESSION" ]]; then
-    if grep -qE '^Exec=.*uwsm[[:space:]]+start([[:space:]]|$)' "$UWSM_SESSION"; then
-        pass "Hyprland session is launched through UWSM."
-    else
-        fail "Hyprland UWSM session does not contain an expected uwsm start command."
-    fi
-fi
-
-# ------------------------------------------------------------
-# DMS environment
-# ------------------------------------------------------------
-
-printf '\n'
-log "Checking DMS environment..."
-
-DMS_ENV="$HOME/.config/environment.d/90-dms.conf"
-
-check_file \
-    "$DMS_ENV" \
-    "DMS environment file exists: $DMS_ENV"
-
-if [[ -f "$DMS_ENV" ]]; then
-    if grep -q '^QT_QPA_PLATFORM=wayland$' "$DMS_ENV"; then
-        pass "Qt is configured to use Wayland."
-    else
-        fail "QT_QPA_PLATFORM=wayland is missing."
-    fi
-
-    if grep -q '^QT_QPA_PLATFORMTHEME=gtk3$' "$DMS_ENV"; then
-        pass "Qt platform theme is configured."
-    else
-        fail "QT_QPA_PLATFORMTHEME=gtk3 is missing."
-    fi
-
-    if grep -q '^ELECTRON_OZONE_PLATFORM_HINT=auto$' "$DMS_ENV"; then
-        pass "Electron Wayland hint is configured."
-    else
-        fail "ELECTRON_OZONE_PLATFORM_HINT=auto is missing."
-    fi
-
-    if grep -q '^TERMINAL=kitty$' "$DMS_ENV"; then
-        pass "DMS terminal is configured as kitty."
-    else
-        fail "TERMINAL=kitty is missing."
-    fi
-fi
-
-# ------------------------------------------------------------
-# Hyprland session target
-# ------------------------------------------------------------
-
-printf '\n'
-log "Checking Hyprland systemd session target..."
-
-if systemctl --user cat hyprland-session.target >/dev/null 2>&1; then
-    pass "Hyprland systemd session target is available."
+if [[ -f "$UWSM_SESSION" ]] &&
+   grep -qE '^Exec=uwsm[[:space:]]+start[[:space:]]+--[[:space:]]+hyprland\.desktop$' "$UWSM_SESSION"; then
+    pass "UWSM session correctly launches hyprland.desktop."
 else
-    warn "Hyprland session target could not be queried."
-    warn "This may be normal because the installer is running outside a complete user session."
+    fail "UWSM session has an unexpected or missing Exec entry."
 fi
 
-# ------------------------------------------------------------
-# DMS service
-# ------------------------------------------------------------
-
-printf '\n'
-log "Checking DMS systemd service..."
-
-if systemctl --user cat dms.service >/dev/null 2>&1; then
-    pass "DMS user service is available."
+if [[ -f "$UWSM_SESSION" ]] &&
+   grep -q '^TryExec=uwsm$' "$UWSM_SESSION"; then
+    pass "UWSM session contains TryExec=uwsm."
 else
-    warn "DMS user service could not be queried through the current user systemd manager."
-    warn "This may be normal because the installer is running outside a complete user session."
+    fail "UWSM session is missing TryExec=uwsm."
 fi
 
 # ------------------------------------------------------------
-# DMS Hyprland integration
+# DankMaterialShell environment
 # ------------------------------------------------------------
 
-printf '\n'
-log "Checking DMS Hyprland integration..."
+log "Checking DankMaterialShell environment..."
 
-HYPR_CONFIG_DIR="$HOME/.config/hypr"
+DMS_ENV_DIR="$HOME/.config/environment.d"
+DMS_ENV_FILE="$DMS_ENV_DIR/90-dms.conf"
 
-if [[ -d "$HYPR_CONFIG_DIR" ]]; then
-    pass "Hyprland configuration directory exists."
+if [[ -d "$DMS_ENV_DIR" ]]; then
+    pass "User environment.d directory exists."
 else
-    fail "Hyprland configuration directory is missing: $HYPR_CONFIG_DIR"
+    fail "User environment.d directory was not found: $DMS_ENV_DIR"
 fi
+
+if [[ -f "$DMS_ENV_FILE" ]]; then
+    pass "DMS environment configuration exists: $DMS_ENV_FILE"
+else
+    fail "DMS environment configuration was not found: $DMS_ENV_FILE"
+fi
+
+if [[ -f "$DMS_ENV_FILE" ]] &&
+   grep -q '^QT_QPA_PLATFORM=wayland$' "$DMS_ENV_FILE"; then
+    pass "QT_QPA_PLATFORM=wayland is configured."
+else
+    fail "QT_QPA_PLATFORM=wayland is missing from DMS environment."
+fi
+
+if [[ -f "$DMS_ENV_FILE" ]] &&
+   grep -q '^TERMINAL=kitty$' "$DMS_ENV_FILE"; then
+    pass "TERMINAL=kitty is configured."
+else
+    fail "TERMINAL=kitty is missing from DMS environment."
+fi
+
+# ------------------------------------------------------------
+# DMS Hyprland configuration
+# ------------------------------------------------------------
+
+log "Checking DMS Hyprland configuration..."
 
 DMS_HYPR_DIR="$HOME/.config/hypr/dms"
 
 if [[ -d "$DMS_HYPR_DIR" ]]; then
-    pass "DMS Hyprland configuration directory exists."
+    pass "DMS Hyprland configuration exists: $DMS_HYPR_DIR"
 else
-    fail "DMS Hyprland configuration directory is missing: $DMS_HYPR_DIR"
+    fail "DMS Hyprland configuration directory was not found: $DMS_HYPR_DIR"
 fi
 
 # ------------------------------------------------------------
-# Core backend services
+# User systemd integration
 # ------------------------------------------------------------
 
-printf '\n'
-log "Checking core backend services..."
+log "Checking user systemd integration..."
 
-for service in \
-    NetworkManager.service \
-    bluetooth.service \
-    pipewire.service \
-    pipewire-pulse.service \
-    wireplumber.service; do
+if systemctl --user cat hyprland-session.target >/dev/null 2>&1; then
+    pass "hyprland-session.target is available to the user manager."
+else
+    warn "hyprland-session.target could not be queried from the current user manager."
+fi
 
+if systemctl --user cat dms.service >/dev/null 2>&1; then
+    pass "dms.service is available to the user manager."
+else
+    warn "dms.service could not be queried from the current user manager."
+fi
+
+if systemctl --user is-system-running >/dev/null 2>&1; then
+    pass "User systemd manager is available."
+else
+    warn "User systemd manager is not currently available; this is expected outside a graphical session."
+fi
+
+# ------------------------------------------------------------
+# Backend system services
+# ------------------------------------------------------------
+
+log "Checking system-level backend services..."
+
+SYSTEM_SERVICES=(
+    NetworkManager.service
+    bluetooth.service
+)
+
+for service in "${SYSTEM_SERVICES[@]}"; do
     if systemctl cat "$service" >/dev/null 2>&1; then
         pass "$service is installed."
     else
@@ -219,64 +213,84 @@ for service in \
 done
 
 # ------------------------------------------------------------
-# Important user configuration directories
+# Backend user services
 # ------------------------------------------------------------
 
-printf '\n'
-log "Checking important user configuration directories..."
+log "Checking user-level PipeWire/WirePlumber services..."
 
-for directory in \
-    "$HOME/.config/environment.d"; do
+USER_SERVICE_DIRS=(
+    "$HOME/.config/systemd/user"
+    "$HOME/.local/share/systemd/user"
+    "/etc/systemd/user"
+    "/usr/local/lib/systemd/user"
+    "/usr/lib/systemd/user"
+    "/usr/local/share/systemd/user"
+    "/usr/share/systemd/user"
+)
 
-    if [[ -d "$directory" ]]; then
-        pass "$directory exists."
+USER_SERVICES=(
+    pipewire.service
+    pipewire-pulse.service
+    wireplumber.service
+)
+
+for service in "${USER_SERVICES[@]}"; do
+    found=0
+
+    for unit_dir in "${USER_SERVICE_DIRS[@]}"; do
+        if [[ -f "$unit_dir/$service" ]]; then
+            found=1
+            break
+        fi
+    done
+
+    if [[ "$found" -eq 1 ]]; then
+        pass "$service is installed."
     else
-        warn "$directory does not exist."
+        fail "$service was not found in the user systemd unit paths."
     fi
 done
 
 # ------------------------------------------------------------
-# User systemd manager
+# User configuration directories
 # ------------------------------------------------------------
 
-printf '\n'
-log "Checking current user systemd manager..."
+log "Checking user configuration directories..."
 
-if systemctl --user is-system-running >/dev/null 2>&1; then
-    pass "User systemd manager is reachable."
-else
-    warn "User systemd manager could not be queried."
-    warn "This is normal if the installer is running outside a complete user session."
-fi
+USER_CONFIG_DIRS=(
+    "$HOME/.config/hypr"
+    "$HOME/.config/hypr/dms"
+    "$HOME/.config/environment.d"
+)
+
+for directory in "${USER_CONFIG_DIRS[@]}"; do
+    if [[ -d "$directory" ]]; then
+        pass "Directory exists: $directory"
+    else
+        fail "Directory was not found: $directory"
+    fi
+done
 
 # ------------------------------------------------------------
 # Final result
 # ------------------------------------------------------------
 
-printf '\n'
+log ""
 
-if (( FAILED != 0 )); then
+if [[ "$FAILED" -eq 0 ]]; then
     log "========================================"
-    log "VERIFICATION FAILED"
+    log "VERIFICATION PASSED"
     log "========================================"
-    log "One or more required components are missing or incorrectly configured."
-    log "Review the messages above before rebooting."
-    exit 1
+    log "All required installation checks passed."
+    log ""
+    log "A reboot is recommended before starting the new session."
+    exit 0
 fi
 
 log "========================================"
-log "VERIFICATION PASSED"
+log "VERIFICATION FAILED"
 log "========================================"
-log "The baseline installation appears to be complete."
-log ""
-log "Recommended next step:"
-log "  Reboot the system."
-log ""
-log "After reboot:"
-log "  1. SDDM should appear."
-log "  2. Select the Hyprland (UWSM) session."
-log "  3. Log in."
-log "  4. DMS should start with the Hyprland session."
-log ""
+log "One or more required installation checks failed."
+log "Review the [FAIL] entries above."
 
-exit 0
+exit 1
