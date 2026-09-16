@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
 # ============================================================
 # openSUSE Hyprland Desktop Bootstrap
 # 00-preflight.sh
@@ -10,28 +8,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
-log() {
-    printf '\n[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
-}
-
-die() {
-    printf '\nERROR: %s\n' "$*" >&2
-    exit 1
-}
+source "$SCRIPT_DIR/common.sh"
 
 log "Starting preflight checks..."
 
 # ------------------------------------------------------------
-# Root check
+# Root / required commands
 # ------------------------------------------------------------
 
 if [[ "${EUID}" -eq 0 ]]; then
     die "Do not run this installer as root. Run it as your normal user."
 fi
-
-# ------------------------------------------------------------
-# Required commands
-# ------------------------------------------------------------
 
 command -v sudo >/dev/null 2>&1 \
     || die "sudo is required."
@@ -47,7 +34,6 @@ if [[ ! -r /etc/os-release ]]; then
     die "/etc/os-release was not found."
 fi
 
-# shellcheck disable=SC1091
 source /etc/os-release
 
 log "Detected OS: ${PRETTY_NAME:-unknown}"
@@ -62,16 +48,19 @@ fi
 
 if ! command -v curl >/dev/null 2>&1; then
     log "curl is not installed. Installing it now..."
+
     sudo zypper --non-interactive install curl
 
-    command -v curl >/dev/null 2>&1 || die "Failed to install curl."
+    command -v curl >/dev/null 2>&1 \
+        || die "Failed to install curl."
+
     log "curl installed successfully."
 else
     log "curl is already installed."
 fi
 
 # ------------------------------------------------------------
-# Architecture check
+# Architecture
 # ------------------------------------------------------------
 
 ARCH="$(uname -m)"
@@ -98,41 +87,27 @@ if [[ "$(id -u)" -lt 1000 ]]; then
 fi
 
 # ------------------------------------------------------------
-# Network check
+# Network
 # ------------------------------------------------------------
 
 log "Checking network connectivity..."
 
-if ! curl -fsSI --max-time 10 https://download.opensuse.org >/dev/null; then
-    die "Could not reach download.opensuse.org. Check your internet connection."
+if curl -fsSI --max-time 10 https://download.opensuse.org >/dev/null 2>&1; then
+    log "Network connectivity check passed."
+else
+    log "Warning: direct connectivity check to download.opensuse.org failed."
+    log "Continuing; zypper will perform the definitive repository connectivity check."
 fi
 
 # ------------------------------------------------------------
-# Sudo check
+# Sudo
 # ------------------------------------------------------------
 
 log "Checking sudo access..."
-
 sudo -v
 
-# Keep sudo credentials alive while this stage runs.
-(
-    while true; do
-        sudo -n true
-        sleep 60
-        kill -0 "$$" || exit
-    done
-) 2>/dev/null &
-
-SUDO_KEEPALIVE_PID=$!
-
-cleanup() {
-    if [[ -n "${SUDO_KEEPALIVE_PID:-}" ]]; then
-        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
-    fi
-}
-
-trap cleanup EXIT
+# The master installer owns the long-lived sudo keep-alive.
+# This stage intentionally does not create another background loop.
 
 # ------------------------------------------------------------
 # Project structure
@@ -147,7 +122,7 @@ if [[ ! -f "$PROJECT_DIR/install.sh" ]]; then
 fi
 
 # ------------------------------------------------------------
-# Snapper availability
+# Snapper
 # ------------------------------------------------------------
 
 if command -v snapper >/dev/null 2>&1; then

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
 # ============================================================
 # openSUSE Hyprland Desktop Bootstrap
 # 04-session.sh
@@ -9,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-source "$SCRIPT_DIR/00-preflight.sh"
+source "$SCRIPT_DIR/common.sh"
 
 log "Configuring Hyprland session..."
 
@@ -88,14 +86,6 @@ if ! sudo grep -q '^TryExec=uwsm$' "$UWSM_SESSION"; then
 fi
 
 log "Verified UWSM session entry."
-
-# ------------------------------------------------------------
-# Enable SDDM
-# ------------------------------------------------------------
-
-log "Enabling SDDM..."
-
-sudo systemctl enable sddm.service
 
 # ------------------------------------------------------------
 # Summary

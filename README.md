@@ -1,631 +1,614 @@
-# openSUSE Hyprland Desktop
+# Hyprland-Canvas
 
 A minimal, reproducible **openSUSE Tumbleweed + Hyprland + UWSM + DankMaterialShell** desktop bootstrap.
 
-The goal of this project is to provide a clean starting point rather than a finished "rice". The installer handles the system-level setup, while the `config/` directory is intentionally left as a canvas for building the desktop configuration afterwards.
+This project is intentionally **not a finished rice**. It provides a clean, functional system foundation and leaves `config/` as a blank canvas for building your own Hyprland and DankMaterialShell configuration.
 
 ---
 
-## Overview
+## What this installs
 
-This installer sets up:
+The bootstrap sets up:
 
 * openSUSE Tumbleweed
 * Hyprland
-* UWSM (Universal Wayland Session Manager)
+* UWSM
 * DankMaterialShell (DMS)
 * Quickshell
 * SDDM
+* Kitty
+* Zsh
+* Oh My Zsh
+* Powerlevel10k
+* Annotation Mono Nerd Font
 * PipeWire + WirePlumber
 * NetworkManager
 * BlueZ
-* XDG desktop portals
-* AMD Vulkan / firmware support
-* A small collection of desktop applications and utilities
+* Power Profiles Daemon
+* zram
+* XDG user directories
+* Cargo tools
+* Wayland/XDG desktop integration
+* AMD graphics/Vulkan support
+* Optional Flatpak setup
+* Optional HyprMod integration
 
-The intended session flow is:
+DMS provides the desktop shell layer, including the bar, launcher, notifications, session/lock functionality, and system controls. DMS is designed to replace the collection of traditional components normally used for these functions.
 
-```text
-SDDM
- │
- ▼
-Hyprland (UWSM-managed)
- │
- ▼
-UWSM
- │
- ├── Hyprland
- ├── graphical-session.target
- └── user services
-      │
-      ▼
- DankMaterialShell
-```
-
-Hyprland's UWSM session is provided through:
-
-```text
-/usr/share/wayland-sessions/hyprland-uwsm.desktop
-```
-
-The installer does **not** create its own Hyprland systemd session target.
-
----
-
-## What This Project Is
-
-This is a **bootstrap installer**, not a complete desktop configuration.
-
-It establishes the foundation needed for a Hyprland desktop and leaves the actual customization to the configuration layer.
-
-That means things such as:
-
-* keybinds
-* monitor configuration
-* window rules
-* wallpapers
-* themes
-* fonts
-* DMS customization
-* animations
-* appearance
-* application preferences
-
-can be developed separately under `config/`.
-
-The intention is to keep the installer maintainable and avoid coupling system installation with personal configuration.
-
----
-
-## Desktop Philosophy
-
-The setup deliberately avoids installing multiple applications that provide the same desktop functionality.
-
-### DankMaterialShell provides
-
-* status bar
-* launcher
-* notifications
-* lock screen
-* idle/session handling
-* power controls
-* Wi-Fi controls
-* Bluetooth controls
-* desktop shell functionality
-
-Because of this, the setup does not intentionally build a stack around:
+This project therefore **does not intentionally install redundant components such as**:
 
 * Waybar
 * Rofi
 * SwayNC
 * Hyprlock
 * Hypridle
+* Wlogout
 * NetworkManager applet
 * Blueman
-* Wlogout
 
-The underlying services remain installed where appropriate.
-
-For example:
-
-```text
-NetworkManager
-    ↓
-DMS Wi-Fi UI
-
-BlueZ
-    ↓
-DMS Bluetooth UI
-
-PipeWire
-    ↓
-DMS audio controls
-
-systemd / logind
-    ↓
-DMS power/session controls
-```
-
-This keeps the desktop layer relatively small while retaining the normal Linux backend services.
+Backend services such as NetworkManager, BlueZ, PipeWire, and systemd remain installed because DMS uses them for system integration.
 
 ---
 
-## Repository Structure
+## Philosophy
+
+Hyprland-Canvas is designed around a few principles:
+
+### Minimal foundation
+
+The installer should provide the system components needed for a usable Hyprland desktop without turning the repository into a pre-made dotfiles collection.
+
+### Reproducibility
+
+Installation is divided into small, ordered stages rather than one large script.
+
+Each stage has one responsibility and can be inspected independently.
+
+### Safe reruns
+
+Stages should avoid unnecessarily overwriting existing user configuration.
+
+### Optional by design
+
+Optional packages and components are controlled from the main installer rather than prompting independently in multiple stages.
+
+### Blank canvas
+
+The repository is a **bootstrap**, not a rice.
+
+The `config/` directory is intentionally left available for future Hyprland/DMS configuration.
+
+---
+
+# Repository structure
 
 ```text
 Hyprland-Canvas/
 ├── install.sh
 │
 ├── scripts/
+│   ├── common.sh
 │   ├── 00-preflight.sh
 │   ├── 01-repos.sh
-│   ├── 02-packages.sh
-│   ├── 03-sddm.sh
-│   ├── 04-session.sh
+│   ├── 02-snapshot.sh
+│   ├── 03-packages.sh
+│   ├── 04-sddm.sh
 │   ├── 05-dms.sh
+│   ├── 06-session.sh
+│   ├── 07-services.sh
+│   ├── 08-zram.sh
+│   ├── 09-user_dirs.sh
+│   ├── 10-cargos.sh
+│   ├── 11-shell.sh
+│   ├── 12-kitty.sh
+│   ├── 13-flatpak.sh
+│   ├── 14-hyprmod.sh
 │   └── 99-verify.sh
 │
 ├── config/
-│   └── ...
-│
 ├── .gitattributes
 └── README.md
 ```
 
-### Installer stages
+---
 
-| Stage             | Purpose                                     |
-| ----------------- | ------------------------------------------- |
-| `00-preflight.sh` | Validate the system before making changes   |
-| `01-repos.sh`     | Configure required openSUSE repositories    |
-| `02-packages.sh`  | Install the desktop and supporting packages |
-| `03-sddm.sh`      | Configure and enable SDDM                   |
-| `04-session.sh`   | Verify the Hyprland UWSM session            |
-| `05-dms.sh`       | Configure DankMaterialShell                 |
-| `99-verify.sh`    | Perform final installation checks           |
+# Installation flow
+
+The installer runs the following stages in order:
+
+```text
+00-preflight
+      ↓
+01-repos
+      ↓
+02-snapshot
+      ↓
+03-packages
+      ↓
+04-sddm
+      ↓
+05-dms
+      ↓
+06-session
+      ↓
+07-services
+      ↓
+08-zram
+      ↓
+09-user_dirs
+      ↓
+10-cargos
+      ↓
+11-shell
+      ↓
+12-kitty
+      ↓
+13-flatpak
+      ↓
+14-hyprmod
+      ↓
+99-verify
+```
+
+Each stage is executed independently by `install.sh`.
+
+`common.sh` provides the shared shell behavior and logging helpers used by the stages.
 
 ---
 
-## Requirements
+# Optional components
 
-The installer currently targets:
+Optional installation is selected **once** by `install.sh`.
 
-* **openSUSE Tumbleweed**
-* **x86_64**
-* a normal non-root user
-* `sudo`
-* an active internet connection
-
-The installer intentionally refuses to run as root.
-
-Run it as your normal user.
-
-### Curl
-
-`curl` does **not** need to be pre-installed.
-
-During the preflight stage, the installer checks whether `curl` is available. If it is missing, it automatically installs it using:
-
-```bash
-sudo zypper --non-interactive install curl
-```
-
-The installer then verifies that `curl` is available before continuing.
-
----
-
-## Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/nil2509/Hyprland-Canvas.git
-cd Hyprland-Canvas
-```
-
-Make sure the installer is executable:
-
-```bash
-chmod +x install.sh
-```
-
-Run:
+### Interactive
 
 ```bash
 ./install.sh
 ```
 
-**Do not run the installer with `sudo`.**
-
-The installer will:
-
-1. perform preflight checks
-2. install `curl` if it is missing
-3. configure repositories
-4. install required packages
-5. configure SDDM
-6. verify the UWSM Hyprland session
-7. configure DankMaterialShell
-8. perform final verification
-
-A timestamped installation log is created in the repository directory:
+The installer asks:
 
 ```text
-install-YYYYMMDD-HHMMSS.log
+Install optional packages and components? [y/N]:
 ```
 
----
-
-## Optional Packages
-
-The default installation focuses on the desktop foundation.
-
-Optional packages can be installed with:
+### Enable optional components
 
 ```bash
-INSTALL_OPTIONAL=1 ./install.sh
+./install.sh --with-optional
 ```
 
-These include additional tools such as:
-
-* Neovim
-* ripgrep
-* eza
-* fzf
-* fd
-* btop
-* fastfetch
-* tmux
-* C/C++ development tools
-* Rust tooling
-* build systems
-* `opi`
-* `cmatrix`
-
-Optional packages are deliberately kept separate from the baseline installation.
-
----
-
-## Package Groups
-
-The installer separates packages into three groups.
-
-### Core
-
-The core group contains the components required for the desktop foundation:
-
-```text
-Hyprland
-UWSM
-Quickshell
-DankMaterialShell
-SDDM
-XWayland
-XDG desktop portals
-PipeWire
-WirePlumber
-NetworkManager
-BlueZ
-power-profiles-daemon
-AMD Vulkan / firmware support
-basic shell and archive/network tools
-```
-
-### Extra
-
-The extra group contains desktop applications, visual utilities and quality-of-life components:
-
-```text
-Dolphin
-Gwenview
-Ark
-KDE Framework integration
-GTK/Qt theming support
-wallpaper backend
-CAVA
-brightnessctl
-playerctl
-screenshots / recording tools
-fonts
-zram-generator
-fwupd
-Flatpak
-```
-
-### Optional
-
-The optional group contains development and terminal utilities that aren't required for the desktop itself.
-
----
-
-## Repositories
-
-The installer configures the repositories required for the selected packages:
-
-```text
-X11:Wayland
-home:AvengeMedia:danklinux
-home:AvengeMedia:dms
-```
-
-Repository metadata is refreshed before package installation.
-
----
-
-## SDDM
-
-SDDM is used as the display manager.
-
-The installer creates:
-
-```text
-/etc/sddm.conf.d/10-hyprland.conf
-```
-
-with:
-
-```ini
-[General]
-DisplayServer=wayland
-```
-
-SDDM is then enabled through systemd.
-
----
-
-## Hyprland + UWSM
-
-The installer expects Hyprland to provide:
-
-```text
-/usr/share/wayland-sessions/hyprland-uwsm.desktop
-```
-
-This is the UWSM-managed Hyprland session exposed to the display manager.
-
-After rebooting, select the Hyprland UWSM session from SDDM.
-
-UWSM handles the compositor session and systemd integration.
-
-The installer does **not** manually create:
-
-```text
-hyprland-session.target
-```
-
-and does not manually start it.
-
-The Hyprland/UWSM session is responsible for the appropriate systemd session integration.
-
----
-
-## DankMaterialShell
-
-DMS is configured using its headless setup mode:
+### Disable optional components
 
 ```bash
-dms setup headless \
-    --compositor hyprland \
-    --terminal kitty \
-    --skip-existing
+./install.sh --without-optional
 ```
 
-This is intended for automated installations and avoids interactive setup during the bootstrap process.
+### Help
 
-The installer also creates:
+```bash
+./install.sh --help
+```
+
+If the installer is executed non-interactively without an explicit option, optional components are skipped.
+
+---
+
+# Optional components currently include
+
+Depending on the selected installer option:
+
+* Additional command-line utilities
+* Development tools
+* Flatpak setup
+* HyprMod
+
+HyprMod is installed through `uv` when optional components are enabled.
+
+Its current upstream installation flow uses:
+
+```bash
+uv tool install git+https://github.com/BlueManCZ/hyprmod.git
+```
+
+followed by:
+
+```bash
+hyprmod --install
+```
+
+---
+
+# DMS architecture
+
+DankMaterialShell is the primary desktop shell for this setup.
+
+DMS is built on Quickshell and supports Hyprland as a compositor. Its current documentation describes DMS as a complete desktop shell rather than simply a panel.
+
+The intended architecture is therefore:
 
 ```text
-~/.config/environment.d/90-dms.conf
+                 SDDM
+                  │
+                  ▼
+             UWSM session
+                  │
+                  ▼
+              Hyprland
+                  │
+          ┌───────┴───────┐
+          │               │
+          ▼               ▼
+      Quickshell          DMS
+                          │
+        ┌─────────────────┼──────────────────┐
+        │                 │                  │
+        ▼                 ▼                  ▼
+       Bar             Launcher          Notifications
+        │
+        ├────────────── Session / Lock
+        │
+        ├────────────── Power controls
+        │
+        ├────────────── Network controls
+        │
+        └────────────── Bluetooth controls
 ```
 
-containing:
-
-```ini
-QT_QPA_PLATFORM=wayland
-QT_QPA_PLATFORMTHEME=gtk3
-ELECTRON_OZONE_PLATFORM_HINT=auto
-TERMINAL=kitty
-```
-
-DMS's Hyprland integration is expected under:
+DMS generates its Hyprland integration under:
 
 ```text
 ~/.config/hypr/dms/
 ```
 
-DMS is intentionally used as the primary desktop shell instead of assembling multiple overlapping shell components.
+and provides the shell-side desktop functionality.
+
+The project intentionally does not add another bar, notification daemon, lock screen, or idle daemon alongside DMS.
 
 ---
 
-## Verification
+# Session management
 
-The final verification stage checks the installation foundation.
-
-### Programs
+The login/session stack is:
 
 ```text
-Hyprland
-uwsm
-dms
-quickshell
-kitty
-sddm
-systemctl
+SDDM
+ ↓
+Hyprland (UWSM session)
+ ↓
+DMS / Quickshell
 ```
 
-### SDDM
+The installer creates or verifies the Hyprland UWSM Wayland session.
 
-* configuration exists
-* Wayland greeter is configured
-* SDDM is enabled
+The expected session entry launches:
 
-### UWSM
+```text
+uwsm start -- hyprland.desktop
+```
 
-* `hyprland-uwsm.desktop` exists
-* the session entry uses UWSM
+This keeps compositor startup under UWSM rather than launching Hyprland directly from SDDM.
 
-### DMS
+---
 
-* environment configuration exists
-* expected environment variables are present
-* DMS Hyprland configuration exists
+# Services
 
-### Backend services
-
-The installer verifies that the relevant service units are installed:
+The bootstrap enables the system services required by the desktop:
 
 ```text
 NetworkManager.service
 bluetooth.service
+power-profiles-daemon.service
+```
+
+Audio is provided through the user's systemd session:
+
+```text
 pipewire.service
 pipewire-pulse.service
 wireplumber.service
 ```
 
-Some user-systemd checks may produce warnings during installation because the installer normally runs outside the newly-created graphical session. These warnings are not treated as installation failures.
+These are backend services. They are not intended to be replaced by shell-specific applets.
 
 ---
 
-## After Installation
+# zram
 
-Once the installer completes:
+The installer can configure:
 
 ```text
-1. Reboot
-2. SDDM appears
-3. Select the Hyprland UWSM session
-4. Log in
-5. DMS starts with the session
+/etc/systemd/zram-generator.conf
 ```
 
-The first reboot is recommended because the installer is configuring a new graphical session and user environment.
+with:
+
+```ini
+[zram0]
+zram-size = ram / 2
+compression-algorithm = zstd
+```
+
+Existing zram configuration is preserved rather than blindly overwritten.
 
 ---
 
-## Configuration
+# Shell environment
 
-The `config/` directory is intentionally kept separate from the installer.
+The shell setup provides:
 
-The long-term goal is to build the desktop configuration incrementally rather than ship a pre-made rice.
+* Zsh
+* Oh My Zsh
+* Powerlevel10k
+* zoxide
+* Cargo binary path integration
 
-Possible future configuration areas include:
+The default shell is changed to Zsh.
+
+Powerlevel10k is installed as the Oh My Zsh theme:
+
+```text
+powerlevel10k/powerlevel10k
+```
+
+The installer does not automatically run the interactive Powerlevel10k configuration wizard.
+
+---
+
+# Fonts
+
+The bootstrap installs **Annotation Mono Nerd Font**.
+
+The font is also configured for Kitty:
+
+```text
+font_family AnnotationMono Nerd Font
+```
+
+The intention is to provide a consistent terminal font foundation without imposing a complete visual theme.
+
+---
+
+# Kitty
+
+Kitty is the default terminal for the DMS setup.
+
+The installer creates:
+
+```text
+~/.config/kitty/kitty.conf
+```
+
+if it does not already exist.
+
+Existing Kitty configuration is preserved, with the required font configuration added when necessary.
+
+---
+
+# Cargo tools
+
+Cargo is installed as part of the core environment.
+
+The bootstrap installs:
+
+```text
+pokeget
+zoxide
+matugen
+```
+
+into the user's Cargo binary directory.
+
+Normally this is:
+
+```text
+~/.cargo/bin/
+```
+
+or the equivalent directory when `CARGO_HOME` is customized.
+
+### Matugen
+
+[Matugen](https://github.com/InioX/matugen) is a Material You and Base16 color-generation tool. It can generate color schemes from inputs such as images and expose those colors to configured templates.
+
+It is installed through Cargo using:
+
+```bash
+cargo install matugen
+```
+
+Matugen is part of the **core Cargo toolset**, rather than an optional component.
+
+---
+
+# Configuration
+
+The repository deliberately does **not** ship a finished Hyprland rice.
+
+The intended layout is:
 
 ```text
 config/
-├── hypr/
-├── dms/
-├── uwsm/
-├── kitty/
-├── qt/
-├── gtk/
-└── ...
 ```
 
-These should be added only as the configuration actually develops.
+as a future configuration canvas.
 
-The `config/` directory is the **canvas**.
+You can build your own:
+
+```text
+Hyprland
+DMS
+Quickshell
+Kitty
+GTK
+Qt
+Matugen
+```
+
+configuration without having to remove a pre-existing theme or dotfiles collection first.
 
 ---
 
-## Design Principles
+# Verification
 
-### 1. Reproducible
-
-A fresh Tumbleweed installation should be able to bootstrap the same desktop foundation by cloning the repository and running:
-
-```bash
-./install.sh
-```
-
-### 2. Idempotent where practical
-
-Existing repositories and configuration should not unnecessarily be recreated.
-
-DMS setup uses:
+The final installer stage is:
 
 ```text
---skip-existing
+99-verify.sh
 ```
 
-to avoid overwriting existing configuration.
+It checks the resulting installation for things such as:
 
-### 3. Fail early
+* Required executables
+* SDDM configuration
+* SDDM enablement
+* Graphical target
+* Hyprland session
+* UWSM session
+* DMS environment
+* DMS Hyprland configuration
+* XDG user directories
+* Cargo-installed tools
+* `pokeget`
+* `zoxide`
+* `matugen`
+* Zsh
+* Oh My Zsh
+* Powerlevel10k
+* Default shell
+* Annotation Mono Nerd Font
+* Kitty configuration
+* zram
+* NetworkManager
+* Bluetooth
+* Power Profiles Daemon
+* User PipeWire/WirePlumber units
+* Hyprland systemd session integration
+* Optional HyprMod
+* Required user configuration directories
 
-The installer uses:
-
-```bash
-set -euo pipefail
-```
-
-and performs preflight validation before making system changes.
-
-Each installer stage is also run independently so failures can be identified clearly.
-
-### 4. Clear separation of responsibilities
+The verifier distinguishes between:
 
 ```text
-install.sh
-    ↓
-installer stages
-    ↓
-system foundation
-    ↓
-desktop session
-    ↓
-configuration
+[PASS]
+[WARN]
+[FAIL]
 ```
 
-The installer should establish the platform; the configuration should define the user's desktop.
+Core installation problems produce a failed verification.
 
-### 5. Avoid unnecessary duplication
+Session-dependent user services that cannot necessarily be queried before the graphical session is active are treated as warnings.
 
-If DMS already provides a desktop-shell feature, another program should not be installed simply to provide the same feature.
-
-The project prefers a small desktop stack with normal Linux backend services underneath it.
+Optional components never cause the core installation verification to fail merely because they were not requested.
 
 ---
 
-## Recovery
+# Logs
 
-The installer is designed to stop when a required stage fails.
-
-Every installation creates a timestamped log:
+`install.sh` creates a timestamped log in the repository directory:
 
 ```text
 install-YYYYMMDD-HHMMSS.log
 ```
 
-If something goes wrong, inspect the log first.
-
-Because the installer modifies system packages, repositories and SDDM configuration, it is recommended to have a working system snapshot/backup strategy before performing a major system bootstrap.
-
-If a stage fails, fix the underlying issue before rerunning the installer.
-
----
-
-## Important Notes
-
-This project currently targets **openSUSE Tumbleweed only**.
-
-It is not intended to be a universal Linux installer.
-
-The package selection also assumes an **AMD graphics environment** for the Vulkan/firmware packages included in the baseline.
-
-Hardware-specific configuration may need to be added later for systems using different GPU hardware.
-
-The installer also assumes a relatively clean Tumbleweed installation. Existing desktop environments, display managers, custom repositories, or conflicting system configuration may require manual cleanup or adjustment before running it.
-
----
-
-## Current Status
-
-The bootstrap currently provides:
+For example:
 
 ```text
-[✓] Preflight checks
-[✓] Curl bootstrap
-[✓] Repository setup
-[✓] Core package installation
-[✓] Extra package installation
-[✓] Optional package support
-[✓] SDDM configuration
-[✓] Hyprland UWSM session
-[✓] DankMaterialShell setup
-[✓] Final verification
-
-[ ] Personal Hyprland configuration
-[ ] Personal DMS configuration
-[ ] Final desktop theming
+install-20260916-193000.log
 ```
 
-The installer is intentionally considered the **foundation** of the project.
-
-The actual desktop configuration will be developed separately.
+The log captures the installer output and is useful when diagnosing a failed stage.
 
 ---
 
-## License
+# Reboot
 
-This project is provided as-is for personal use and experimentation.
+After a successful installation, a reboot is recommended before starting the new desktop session.
 
-Check the licenses of the individual packages, projects, and repositories installed by the bootstrap for their respective terms.
+```bash
+sudo reboot
+```
+
+After reboot, select the Hyprland/UWSM session from SDDM.
+
+---
+
+# Important notes
+
+## This is intended for openSUSE Tumbleweed
+
+The project targets:
+
+```text
+openSUSE Tumbleweed
+```
+
+It is not intended to be a generic Arch/Fedora/Debian installer.
+
+Package names, repositories, and system integration are therefore specific to the openSUSE environment.
+
+## Existing desktop environments
+
+This project is intended to establish a Hyprland-focused desktop environment.
+
+If you are installing it on a machine that already has another desktop environment, display manager, shell configuration, or extensive system customization, review the scripts before running them.
+
+In particular, the installer configures SDDM as the display manager and changes the user's default shell to Zsh.
+
+## Backups
+
+The installer includes a snapshot stage before the main system/package changes.
+
+However, you should still maintain your own backups of important files and configurations.
+
+---
+
+# Development
+
+Installer stages are intentionally independent.
+
+To add or modify functionality:
+
+1. Create or edit the appropriate stage.
+2. Keep shared shell behavior in `common.sh`.
+3. Avoid sourcing another executable stage from a stage.
+4. Keep stages focused on one responsibility.
+5. Add corresponding verification to `99-verify.sh` when appropriate.
+6. Test on a clean Tumbleweed installation.
+
+The main installer is responsible for:
+
+* stage ordering
+* logging
+* optional-component selection
+* sudo handling
+* stage discovery
+* stage execution
+* stopping on stage failure
+
+Individual stages are responsible for their own configuration work.
+
+---
+
+# Design goal
+
+The end result should be a clean starting point:
+
+```text
+openSUSE Tumbleweed
+        │
+        ▼
+      SDDM
+        │
+        ▼
+   UWSM + Hyprland
+        │
+        ▼
+ DankMaterialShell
+        │
+        ▼
+     Your config
+```
+
+**The bootstrap builds the foundation.
+The `config/` directory is where the rice begins.**
