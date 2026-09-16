@@ -39,9 +39,6 @@ command -v sudo >/dev/null 2>&1 \
 command -v zypper >/dev/null 2>&1 \
     || die "zypper is required. This installer targets openSUSE."
 
-command -v curl >/dev/null 2>&1 \
-    || die "curl is required."
-
 # ------------------------------------------------------------
 # OS check
 # ------------------------------------------------------------
@@ -57,6 +54,20 @@ log "Detected OS: ${PRETTY_NAME:-unknown}"
 
 if [[ "${ID:-}" != "opensuse-tumbleweed" ]]; then
     die "This installer currently supports openSUSE Tumbleweed only."
+fi
+
+# ------------------------------------------------------------
+# Curl
+# ------------------------------------------------------------
+
+if ! command -v curl >/dev/null 2>&1; then
+    log "curl is not installed. Installing it now..."
+    sudo zypper --non-interactive install curl
+
+    command -v curl >/dev/null 2>&1 || die "Failed to install curl."
+    log "curl installed successfully."
+else
+    log "curl is already installed."
 fi
 
 # ------------------------------------------------------------

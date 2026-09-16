@@ -43,7 +43,6 @@ CORE_PACKAGES=(
     kernel-firmware-amdgpu
     ucode-amd
     zsh
-    curl
     wget
     unzip
     tar
