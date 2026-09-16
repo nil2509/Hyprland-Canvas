@@ -10,17 +10,17 @@ The goal of this project is to provide a clean starting point rather than a fini
 
 This installer sets up:
 
-* **openSUSE Tumbleweed**
-* **Hyprland**
-* **UWSM (Universal Wayland Session Manager)**
-* **DankMaterialShell (DMS)**
-* **Quickshell**
-* **SDDM**
-* **PipeWire + WirePlumber**
-* **NetworkManager**
-* **BlueZ**
-* **XDG desktop portals**
-* **AMD Vulkan / firmware support**
+* openSUSE Tumbleweed
+* Hyprland
+* UWSM (Universal Wayland Session Manager)
+* DankMaterialShell (DMS)
+* Quickshell
+* SDDM
+* PipeWire + WirePlumber
+* NetworkManager
+* BlueZ
+* XDG desktop portals
+* AMD Vulkan / firmware support
 * A small collection of desktop applications and utilities
 
 The intended session flow is:
@@ -48,7 +48,7 @@ Hyprland's UWSM session is provided through:
 /usr/share/wayland-sessions/hyprland-uwsm.desktop
 ```
 
-The installer does not create its own Hyprland systemd session target.
+The installer does **not** create its own Hyprland systemd session target.
 
 ---
 
@@ -93,7 +93,7 @@ The setup deliberately avoids installing multiple applications that provide the 
 * Bluetooth controls
 * desktop shell functionality
 
-Because of this, the setup does **not** intentionally build a stack around:
+Because of this, the setup does not intentionally build a stack around:
 
 * Waybar
 * Rofi
@@ -133,7 +133,7 @@ This keeps the desktop layer relatively small while retaining the normal Linux b
 ## Repository Structure
 
 ```text
-opensuse-hyprland/
+Hyprland-Canvas/
 ├── install.sh
 │
 ├── scripts/
@@ -148,6 +148,7 @@ opensuse-hyprland/
 ├── config/
 │   └── ...
 │
+├── .gitattributes
 └── README.md
 ```
 
@@ -179,6 +180,18 @@ The installer intentionally refuses to run as root.
 
 Run it as your normal user.
 
+### Curl
+
+`curl` does **not** need to be pre-installed.
+
+During the preflight stage, the installer checks whether `curl` is available. If it is missing, it automatically installs it using:
+
+```bash
+sudo zypper --non-interactive install curl
+```
+
+The installer then verifies that `curl` is available before continuing.
+
 ---
 
 ## Installation
@@ -186,8 +199,8 @@ Run it as your normal user.
 Clone the repository:
 
 ```bash
-git clone <repository-url>
-cd opensuse-hyprland
+git clone https://github.com/nil2509/Hyprland-Canvas.git
+cd Hyprland-Canvas
 ```
 
 Make sure the installer is executable:
@@ -202,17 +215,20 @@ Run:
 ./install.sh
 ```
 
+**Do not run the installer with `sudo`.**
+
 The installer will:
 
 1. perform preflight checks
-2. configure repositories
-3. install required packages
-4. configure SDDM
-5. verify the UWSM Hyprland session
-6. configure DankMaterialShell
-7. perform final verification
+2. install `curl` if it is missing
+3. configure repositories
+4. install required packages
+5. configure SDDM
+6. verify the UWSM Hyprland session
+7. configure DankMaterialShell
+8. perform final verification
 
-A log is created in the repository directory:
+A timestamped installation log is created in the repository directory:
 
 ```text
 install-YYYYMMDD-HHMMSS.log
@@ -359,7 +375,7 @@ hyprland-session.target
 
 and does not manually start it.
 
-Current Hyprland integrates its session target automatically, while UWSM starts `graphical-session.target` for the managed graphical session.
+The Hyprland/UWSM session is responsible for the appropriate systemd session integration.
 
 ---
 
@@ -397,11 +413,13 @@ DMS's Hyprland integration is expected under:
 ~/.config/hypr/dms/
 ```
 
+DMS is intentionally used as the primary desktop shell instead of assembling multiple overlapping shell components.
+
 ---
 
 ## Verification
 
-The final verification stage checks:
+The final verification stage checks the installation foundation.
 
 ### Programs
 
@@ -434,7 +452,7 @@ systemctl
 
 ### Backend services
 
-The installer verifies that the following service units are installed:
+The installer verifies that the relevant service units are installed:
 
 ```text
 NetworkManager.service
@@ -444,7 +462,7 @@ pipewire-pulse.service
 wireplumber.service
 ```
 
-Some user-systemd checks may produce warnings during installation because the installer is normally running outside the newly-created graphical session. These warnings are not treated as installation failures.
+Some user-systemd checks may produce warnings during installation because the installer normally runs outside the newly-created graphical session. These warnings are not treated as installation failures.
 
 ---
 
@@ -485,6 +503,8 @@ config/
 
 These should be added only as the configuration actually develops.
 
+The `config/` directory is the **canvas**.
+
 ---
 
 ## Design Principles
@@ -519,6 +539,8 @@ set -euo pipefail
 
 and performs preflight validation before making system changes.
 
+Each installer stage is also run independently so failures can be identified clearly.
+
 ### 4. Clear separation of responsibilities
 
 ```text
@@ -539,6 +561,8 @@ The installer should establish the platform; the configuration should define the
 
 If DMS already provides a desktop-shell feature, another program should not be installed simply to provide the same feature.
 
+The project prefers a small desktop stack with normal Linux backend services underneath it.
+
 ---
 
 ## Recovery
@@ -555,6 +579,8 @@ If something goes wrong, inspect the log first.
 
 Because the installer modifies system packages, repositories and SDDM configuration, it is recommended to have a working system snapshot/backup strategy before performing a major system bootstrap.
 
+If a stage fails, fix the underlying issue before rerunning the installer.
+
 ---
 
 ## Important Notes
@@ -567,6 +593,8 @@ The package selection also assumes an **AMD graphics environment** for the Vulka
 
 Hardware-specific configuration may need to be added later for systems using different GPU hardware.
 
+The installer also assumes a relatively clean Tumbleweed installation. Existing desktop environments, display managers, custom repositories, or conflicting system configuration may require manual cleanup or adjustment before running it.
+
 ---
 
 ## Current Status
@@ -575,6 +603,7 @@ The bootstrap currently provides:
 
 ```text
 [✓] Preflight checks
+[✓] Curl bootstrap
 [✓] Repository setup
 [✓] Core package installation
 [✓] Extra package installation
@@ -583,6 +612,7 @@ The bootstrap currently provides:
 [✓] Hyprland UWSM session
 [✓] DankMaterialShell setup
 [✓] Final verification
+
 [ ] Personal Hyprland configuration
 [ ] Personal DMS configuration
 [ ] Final desktop theming
@@ -591,3 +621,11 @@ The bootstrap currently provides:
 The installer is intentionally considered the **foundation** of the project.
 
 The actual desktop configuration will be developed separately.
+
+---
+
+## License
+
+This project is provided as-is for personal use and experimentation.
+
+Check the licenses of the individual packages, projects, and repositories installed by the bootstrap for their respective terms.
