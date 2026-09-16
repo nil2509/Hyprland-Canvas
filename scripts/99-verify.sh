@@ -42,6 +42,10 @@ check_file() {
     fi
 }
 
+# ------------------------------------------------------------
+# Required commands
+# ------------------------------------------------------------
+
 printf '\n'
 log "Checking required commands..."
 
@@ -52,6 +56,10 @@ check_command quickshell
 check_command kitty
 check_command sddm
 check_command systemctl
+
+# ------------------------------------------------------------
+# SDDM
+# ------------------------------------------------------------
 
 printf '\n'
 log "Checking SDDM configuration..."
@@ -76,6 +84,10 @@ else
     fail "SDDM is not enabled."
 fi
 
+# ------------------------------------------------------------
+# Hyprland UWSM session
+# ------------------------------------------------------------
+
 printf '\n'
 log "Checking Hyprland UWSM session..."
 
@@ -88,12 +100,16 @@ else
 fi
 
 if [[ -f "$UWSM_SESSION" ]]; then
-    if grep -qE '^Exec=.*uwsm[[:space:]]+start' "$UWSM_SESSION"; then
+    if grep -qE '^Exec=.*uwsm[[:space:]]+start([[:space:]]|$)' "$UWSM_SESSION"; then
         pass "Hyprland session is launched through UWSM."
     else
         fail "Hyprland UWSM session does not contain an expected uwsm start command."
     fi
 fi
+
+# ------------------------------------------------------------
+# DMS environment
+# ------------------------------------------------------------
 
 printf '\n'
 log "Checking DMS environment..."
@@ -130,56 +146,37 @@ if [[ -f "$DMS_ENV" ]]; then
     fi
 fi
 
+# ------------------------------------------------------------
+# Hyprland session target
+# ------------------------------------------------------------
+
 printf '\n'
 log "Checking Hyprland systemd session target..."
 
-SESSION_TARGET="$HOME/.config/systemd/user/hyprland-session.target"
-
-check_file \
-    "$SESSION_TARGET" \
-    "Hyprland session target exists: $SESSION_TARGET"
-
-if [[ -f "$SESSION_TARGET" ]]; then
-    if grep -q '^Requires=graphical-session.target$' "$SESSION_TARGET"; then
-        pass "Hyprland session target requires graphical-session.target."
-    else
-        fail "Hyprland session target is missing Requires=graphical-session.target."
-    fi
-
-    if grep -q '^After=graphical-session.target$' "$SESSION_TARGET"; then
-        pass "Hyprland session target starts after graphical-session.target."
-    else
-        fail "Hyprland session target is missing After=graphical-session.target."
-    fi
+if systemctl --user cat hyprland-session.target >/dev/null 2>&1; then
+    pass "Hyprland systemd session target is available."
+else
+    warn "Hyprland session target could not be queried."
+    warn "This may be normal because the installer is running outside a complete user session."
 fi
+
+# ------------------------------------------------------------
+# DMS service
+# ------------------------------------------------------------
 
 printf '\n'
 log "Checking DMS systemd service..."
 
 if systemctl --user cat dms.service >/dev/null 2>&1; then
-    pass "DMS user service exists."
+    pass "DMS user service is available."
 else
-    fail "DMS user service was not found."
+    warn "DMS user service could not be queried through the current user systemd manager."
+    warn "This may be normal because the installer is running outside a complete user session."
 fi
 
-DMS_WANTS_DIR="$HOME/.config/systemd/user/hyprland-session.target.wants"
-DMS_WANTS_LINK="$DMS_WANTS_DIR/dms.service"
-
-if [[ -L "$DMS_WANTS_LINK" ]]; then
-    pass "DMS is attached to hyprland-session.target."
-else
-    fail "DMS is not attached to hyprland-session.target."
-fi
-
-if [[ -L "$DMS_WANTS_LINK" ]]; then
-    DMS_WANTS_TARGET="$(readlink -f "$DMS_WANTS_LINK" 2>/dev/null || true)"
-
-    if [[ "$DMS_WANTS_TARGET" == */dms.service ]]; then
-        pass "DMS target dependency points to dms.service."
-    else
-        warn "DMS dependency exists but its target could not be verified."
-    fi
-fi
+# ------------------------------------------------------------
+# DMS Hyprland integration
+# ------------------------------------------------------------
 
 printf '\n'
 log "Checking DMS Hyprland integration..."
@@ -197,8 +194,12 @@ DMS_HYPR_DIR="$HOME/.config/hypr/dms"
 if [[ -d "$DMS_HYPR_DIR" ]]; then
     pass "DMS Hyprland configuration directory exists."
 else
-    warn "DMS Hyprland configuration directory was not created."
+    fail "DMS Hyprland configuration directory is missing: $DMS_HYPR_DIR"
 fi
+
+# ------------------------------------------------------------
+# Core backend services
+# ------------------------------------------------------------
 
 printf '\n'
 log "Checking core backend services..."
@@ -217,11 +218,14 @@ for service in \
     fi
 done
 
+# ------------------------------------------------------------
+# Important user configuration directories
+# ------------------------------------------------------------
+
 printf '\n'
 log "Checking important user configuration directories..."
 
 for directory in \
-    "$HOME/.config/systemd/user" \
     "$HOME/.config/environment.d"; do
 
     if [[ -d "$directory" ]]; then
@@ -230,6 +234,10 @@ for directory in \
         warn "$directory does not exist."
     fi
 done
+
+# ------------------------------------------------------------
+# User systemd manager
+# ------------------------------------------------------------
 
 printf '\n'
 log "Checking current user systemd manager..."
@@ -241,19 +249,9 @@ else
     warn "This is normal if the installer is running outside a complete user session."
 fi
 
-printf '\n'
-log "Checking DMS setup command..."
-
-if dms setup headless \
-    --compositor hyprland \
-    --terminal kitty \
-    --skip-existing \
-    >/dev/null 2>&1; then
-
-    pass "DMS headless setup can run successfully."
-else
-    fail "DMS headless setup returned an error."
-fi
+# ------------------------------------------------------------
+# Final result
+# ------------------------------------------------------------
 
 printf '\n'
 

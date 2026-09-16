@@ -39,6 +39,9 @@ command -v sudo >/dev/null 2>&1 \
 command -v zypper >/dev/null 2>&1 \
     || die "zypper is required. This installer targets openSUSE."
 
+command -v curl >/dev/null 2>&1 \
+    || die "curl is required."
+
 # ------------------------------------------------------------
 # OS check
 # ------------------------------------------------------------
@@ -101,7 +104,7 @@ log "Checking sudo access..."
 
 sudo -v
 
-# Keep sudo credentials alive while the installer runs.
+# Keep sudo credentials alive while this stage runs.
 (
     while true; do
         sudo -n true
@@ -145,7 +148,7 @@ if command -v snapper >/dev/null 2>&1; then
         log "Snapper is installed but no usable configuration was detected."
     fi
 else
-    log "Snapper is not installed yet. Package installation will handle it if required."
+    log "Snapper is not installed. Continuing without Snapper."
 fi
 
 # ------------------------------------------------------------

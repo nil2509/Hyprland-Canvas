@@ -112,22 +112,34 @@ OPTIONAL_PACKAGES=(
 
 log "Refreshing package metadata..."
 
-sudo zypper --non-interactive refresh
+sudo zypper \
+    --non-interactive \
+    --gpg-auto-import-keys \
+    refresh
 
 log "Installing core packages..."
 
-sudo zypper --non-interactive install \
+sudo zypper \
+    --non-interactive \
+    --auto-agree-with-licenses \
+    install \
     "${CORE_PACKAGES[@]}"
 
 log "Installing desktop and quality-of-life packages..."
 
-sudo zypper --non-interactive install \
+sudo zypper \
+    --non-interactive \
+    --auto-agree-with-licenses \
+    install \
     "${EXTRA_PACKAGES[@]}"
 
 if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
     log "Installing optional packages..."
 
-    sudo zypper --non-interactive install \
+    sudo zypper \
+        --non-interactive \
+        --auto-agree-with-licenses \
+        install \
         "${OPTIONAL_PACKAGES[@]}"
 else
     log "Skipping optional packages."
@@ -136,7 +148,12 @@ fi
 
 log "Verifying required packages..."
 
-for package in "${CORE_PACKAGES[@]}"; do
+REQUIRED_PACKAGES=(
+    "${CORE_PACKAGES[@]}"
+    "${EXTRA_PACKAGES[@]}"
+)
+
+for package in "${REQUIRED_PACKAGES[@]}"; do
     if rpm -q "$package" >/dev/null 2>&1; then
         log "Installed: $package"
     else
@@ -144,6 +161,6 @@ for package in "${CORE_PACKAGES[@]}"; do
     fi
 done
 
-log "Core package installation complete."
+log "Core and extra package installation complete."
 
 exit 0

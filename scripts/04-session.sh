@@ -15,7 +15,7 @@ UWSM_SESSION="$WAYLAND_SESSION_DIR/hyprland-uwsm.desktop"
 
 if [[ -f "$UWSM_SESSION" ]]; then
     log "Found UWSM Hyprland session:"
-    log "$UWSM_SESSION"
+    log "  $UWSM_SESSION"
 else
     die "UWSM Hyprland session entry was not found: $UWSM_SESSION"
 fi
@@ -23,7 +23,7 @@ fi
 log "Enabling SDDM..."
 sudo systemctl enable sddm.service
 
-log "Hyprland UWSM session is ready."
+log "Hyprland UWSM session entry is ready."
 log "SDDM will provide the Hyprland (UWSM) session at login."
 
 exit 0

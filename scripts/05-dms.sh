@@ -6,9 +6,22 @@ source "$SCRIPT_DIR/00-preflight.sh"
 
 log "Configuring DankMaterialShell..."
 
-command -v dms >/dev/null 2>&1 || die "dms is not installed."
-command -v quickshell >/dev/null 2>&1 || die "quickshell is not installed."
-command -v kitty >/dev/null 2>&1 || die "kitty is not installed."
+# ------------------------------------------------------------
+# Required commands
+# ------------------------------------------------------------
+
+command -v dms >/dev/null 2>&1 \
+    || die "dms is not installed."
+
+command -v quickshell >/dev/null 2>&1 \
+    || die "quickshell is not installed."
+
+command -v kitty >/dev/null 2>&1 \
+    || die "kitty is not installed."
+
+# ------------------------------------------------------------
+# User environment
+# ------------------------------------------------------------
 
 log "Configuring user environment..."
 
@@ -21,6 +34,10 @@ ELECTRON_OZONE_PLATFORM_HINT=auto
 TERMINAL=kitty
 EOF
 
+# ------------------------------------------------------------
+# DMS setup
+# ------------------------------------------------------------
+
 log "Running DMS headless setup..."
 
 dms setup headless \
@@ -28,22 +45,25 @@ dms setup headless \
     --terminal kitty \
     --skip-existing
 
-log "Configuring Hyprland systemd session target..."
+# ------------------------------------------------------------
+# Verify DMS configuration
+# ------------------------------------------------------------
 
-mkdir -p "$HOME/.config/systemd/user"
+DMS_HYPR_DIR="$HOME/.config/hypr/dms"
 
-cat > "$HOME/.config/systemd/user/hyprland-session.target" <<'EOF'
-[Unit]
-Description=Hyprland Session Target
-Requires=graphical-session.target
-After=graphical-session.target
-EOF
+if [[ -d "$DMS_HYPR_DIR" ]]; then
+    log "DMS Hyprland configuration directory exists:"
+    log "  $DMS_HYPR_DIR"
+else
+    die "DMS Hyprland configuration directory was not created: $DMS_HYPR_DIR"
+fi
 
-systemctl --user daemon-reload
+# ------------------------------------------------------------
+# Systemd session note
+# ------------------------------------------------------------
 
-log "Connecting DMS to the Hyprland session target..."
-
-systemctl --user add-wants hyprland-session.target dms.service
+log "Hyprland/UWSM systemd integration is handled by the"
+log "Hyprland UWSM session and graphical-session.target."
 
 log "DankMaterialShell configuration complete."
 

@@ -30,11 +30,52 @@ die() {
 }
 
 # ------------------------------------------------------------
+# Basic installer checks
+# ------------------------------------------------------------
+
+if [[ "${EUID}" -eq 0 ]]; then
+    die "Do not run this installer as root. Run it as your normal user."
+fi
+
+command -v sudo >/dev/null 2>&1 \
+    || die "sudo is required."
+
+command -v bash >/dev/null 2>&1 \
+    || die "bash is required."
+
+# ------------------------------------------------------------
+# Sudo authentication
+# ------------------------------------------------------------
+
+log "Checking sudo access..."
+
+sudo -v
+
+# Keep sudo credentials alive for the entire installer.
+(
+    while true; do
+        sudo -n true
+        sleep 60
+        kill -0 "$$" 2>/dev/null || exit
+    done
+) 2>/dev/null &
+
+SUDO_KEEPALIVE_PID=$!
+
+cleanup() {
+    if [[ -n "${SUDO_KEEPALIVE_PID:-}" ]]; then
+        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+        wait "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+    fi
+}
+
+trap cleanup EXIT
+
+# ------------------------------------------------------------
 # Make installer scripts executable
 #
-# This is important because the repository may have been
-# created/cloned from Windows, where executable bits aren't
-# handled the same way as Linux.
+# This is useful when the repository was cloned from a system
+# that did not preserve Linux executable bits.
 # ------------------------------------------------------------
 
 if [[ -d "$SCRIPT_DIR/scripts" ]]; then
@@ -77,7 +118,7 @@ for stage in "${STAGES[@]}"; do
 done
 
 # ------------------------------------------------------------
-# Run stages
+# Installer header
 # ------------------------------------------------------------
 
 log "========================================"
@@ -86,6 +127,10 @@ log "========================================"
 log "Repository: $SCRIPT_DIR"
 log "Log file:   $LOG_FILE"
 log "========================================"
+
+# ------------------------------------------------------------
+# Run stages
+# ------------------------------------------------------------
 
 for stage in "${STAGES[@]}"; do
     stage_path="$SCRIPT_DIR/scripts/$stage"

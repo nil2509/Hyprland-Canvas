@@ -30,22 +30,17 @@ sudo systemctl enable sddm.service
 log "Checking available Wayland sessions..."
 
 UWSM_SESSION="/usr/share/wayland-sessions/hyprland-uwsm.desktop"
-HYPRLAND_SESSION="/usr/share/wayland-sessions/hyprland.desktop"
 
 if [[ -f "$UWSM_SESSION" ]]; then
     log "Found Hyprland UWSM session:"
     log "  $UWSM_SESSION"
-elif [[ -f "$HYPRLAND_SESSION" ]]; then
-    log "Found standard Hyprland session:"
-    log "  $HYPRLAND_SESSION"
-    log "WARNING: Hyprland UWSM session was not found yet."
 else
-    die "No Hyprland Wayland session was found."
+    die "Hyprland UWSM session was not found: $UWSM_SESSION"
 fi
 
 log "Verifying SDDM configuration..."
 
-if grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
+if sudo grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
     log "SDDM greeter is configured for Wayland."
 else
     die "Failed to configure SDDM Wayland display server."
