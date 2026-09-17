@@ -48,7 +48,7 @@ USER_SERVICES=(
 for service in "${USER_SERVICES[@]}"; do
     log "Enabling and starting user service: $service..."
 
-    systemctl --user enable --now "$service"
+    systemctl --user enable "$service"
 
     if systemctl --user is-enabled --quiet "$service"; then
         log "[ok] $service is enabled."

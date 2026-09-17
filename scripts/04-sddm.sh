@@ -40,7 +40,7 @@ EOF
 
 log "Enabling SDDM as the display manager..."
 
-sudo systemctl enable sddm.service
+sudo systemctl enable --force sddm.service
 
 # ------------------------------------------------------------
 # Default boot target

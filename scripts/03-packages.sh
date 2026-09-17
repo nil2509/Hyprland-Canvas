@@ -126,6 +126,12 @@ EXTRA_PACKAGES=(
     dejavu-fonts
     liberation-fonts
 
+    #AMD-specific drivers
+    libvulkan_radeon
+    libvulkan_radeon-32bit
+    kernel-firmware-amdgpu
+    ucode-amd
+
     # System utilities
     zram-generator
     fwupd

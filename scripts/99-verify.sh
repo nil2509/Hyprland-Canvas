@@ -220,11 +220,13 @@ else
     fail "DMS user service is not enabled."
 fi
 
-if systemctl --user is-active --quiet dms.service; then
-    pass "DMS user service is active."
+DMS_WANTS_DIR="$HOME/.config/systemd/user/graphical-session.target.wants"
+DMS_WANTS_LINK="$DMS_WANTS_DIR/dms.service"
+
+if [[ -L "$DMS_WANTS_LINK" ]]; then
+    pass "DMS is attached to graphical-session.target."
 else
-    warn "DMS user service is not currently active."
-    warn "This is expected when verification runs outside the graphical UWSM session."
+    fail "DMS is not attached to graphical-session.target."
 fi
 
 # ------------------------------------------------------------

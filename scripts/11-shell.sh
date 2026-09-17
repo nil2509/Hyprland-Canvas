@@ -112,7 +112,7 @@ else
 
     trap - EXIT
     cleanup_font_install
-}
+fi
 
 # ------------------------------------------------------------
 # Zsh configuration
@@ -125,10 +125,37 @@ MANAGED_END="# <<< Hyprland-Canvas managed configuration <<<"
 
 log "Configuring Zsh: $ZSHRC"
 
-if [[ ! -f "$ZSHRC" ]]; then
-    log "No existing .zshrc found; creating one."
+# ------------------------------------------------------------
+# Backup existing configuration
+#
+# Hyprland-Canvas owns the resulting .zshrc so that the
+# bootstrap always produces a complete, working Zsh setup.
+#
+# Existing user configuration is backed up rather than deleted.
+# ------------------------------------------------------------
 
-    cat > "$ZSHRC" <<EOF
+if [[ -f "$ZSHRC" ]]; then
+
+    if grep -Fqx "$MANAGED_START" "$ZSHRC"; then
+        log "[ok] Existing .zshrc is already managed by Hyprland-Canvas."
+        log "Replacing it with the current bootstrap configuration."
+
+    else
+        BACKUP="$ZSHRC.hyprland-canvas-backup-$(date '+%Y%m%d-%H%M%S')"
+
+        cp "$ZSHRC" "$BACKUP"
+
+        log "[ok] Existing .zshrc backed up to:"
+        log "  $BACKUP"
+    fi
+
+fi
+
+# ------------------------------------------------------------
+# Write complete Zsh configuration
+# ------------------------------------------------------------
+
+cat > "$ZSHRC" <<EOF
 # Hyprland-Canvas Zsh configuration
 
 export ZSH="\$HOME/.oh-my-zsh"
@@ -154,32 +181,43 @@ eval "\$(zoxide init zsh)"
 $MANAGED_END
 EOF
 
-    log "[ok] Created $ZSHRC."
+[[ -f "$ZSHRC" ]] \
+    || die "Failed to create $ZSHRC."
 
+log "[ok] Complete Zsh configuration written."
+
+# ------------------------------------------------------------
+# Verify Zsh configuration
+# ------------------------------------------------------------
+
+if grep -Fqx 'export ZSH="$HOME/.oh-my-zsh"' "$ZSHRC"; then
+    log "[ok] Oh My Zsh path configured."
 else
-    log "Existing .zshrc found; preserving existing configuration."
+    die "Oh My Zsh path is missing from $ZSHRC."
+fi
 
-    if grep -Fqx "$MANAGED_START" "$ZSHRC"; then
-        log "[ok] Hyprland-Canvas configuration block already exists."
+if grep -Fqx 'ZSH_THEME="powerlevel10k/powerlevel10k"' "$ZSHRC"; then
+    log "[ok] Powerlevel10k configured as the Zsh theme."
+else
+    die "Powerlevel10k theme is missing from $ZSHRC."
+fi
 
-    else
-        log "Adding Hyprland-Canvas configuration block..."
+if grep -Fqx 'source "$ZSH/oh-my-zsh.sh"' "$ZSHRC"; then
+    log "[ok] Oh My Zsh bootstrap configured."
+else
+    die "Oh My Zsh bootstrap is missing from $ZSHRC."
+fi
 
-        cat >> "$ZSHRC" <<EOF
+if grep -Fqx 'export PATH="$HOME/.cargo/bin:$PATH"' "$ZSHRC"; then
+    log "[ok] Cargo binary path configured."
+else
+    die "Cargo binary path is missing from $ZSHRC."
+fi
 
-$MANAGED_START
-
-export PATH="\$HOME/.cargo/bin:\$PATH"
-
-eval "\$(zoxide init zsh)"
-
-[[ -f "\$HOME/.p10k.zsh" ]] && source "\$HOME/.p10k.zsh"
-
-$MANAGED_END
-EOF
-
-        log "[ok] Hyprland-Canvas configuration block added."
-    fi
+if grep -Fqx 'eval "$(zoxide init zsh)"' "$ZSHRC"; then
+    log "[ok] zoxide configured."
+else
+    die "zoxide configuration is missing from $ZSHRC."
 fi
 
 # ------------------------------------------------------------
@@ -215,6 +253,7 @@ log "Oh My Zsh:     $ZSH_DIR"
 log "Powerlevel10k: $P10K_DIR"
 log "Font:          Annotation Mono Nerd Font"
 log ""
+log "Powerlevel10k is installed but has not been configured."
 log "Run 'p10k configure' after installation if you want to configure the prompt."
 
 exit 0

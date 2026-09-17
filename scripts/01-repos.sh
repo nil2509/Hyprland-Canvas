@@ -30,10 +30,24 @@ declare -A REPO_URLS=(
 # ------------------------------------------------------------
 
 repo_exists() {
-    local alias="$1"
+    local target="$1"
 
-    sudo zypper --non-interactive repos --details \
-        | awk -v target="$alias" '$1 == target { found=1 } END { exit !found }'
+    sudo zypper repos --details 2>/dev/null |
+        awk -F'|' -v target="$target" '
+            NR > 2 {
+                alias = $2
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", alias)
+
+                if (alias == target) {
+                    found = 1
+                    exit
+                }
+            }
+
+            END {
+                exit !found
+            }
+        '
 }
 
 repo_uri() {

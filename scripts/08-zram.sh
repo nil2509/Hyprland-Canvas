@@ -43,7 +43,7 @@ else
 
     sudo tee "$ZRAM_CONF" >/dev/null <<'EOF'
 [zram0]
-zram-size = ram / 2
+zram-size = min(ram / 2, 4096)
 compression-algorithm = zstd
 EOF
 
