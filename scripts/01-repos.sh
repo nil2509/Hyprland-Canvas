@@ -21,8 +21,8 @@ REPO_ALIASES=(
 )
 
 declare -A REPO_URLS=(
-    [danklinux]="https://download.opensuse.org/repositories/home:AvengeMedia:danklinux/openSUSE_Tumbleweed/home:AvengeMedia:danklinux.repo"
-    [dms]="https://download.opensuse.org/repositories/home:/AvengeMedia:/dms/openSUSE_Tumbleweed/home:AvengeMedia:dms.repo"
+    [danklinux]="https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/openSUSE_Tumbleweed/"
+    [dms]="https://download.opensuse.org/repositories/home:/AvengeMedia:/dms/openSUSE_Tumbleweed/"
 )
 
 # ------------------------------------------------------------
@@ -51,34 +51,55 @@ repo_exists() {
 }
 
 repo_uri() {
-    local alias="$1"
+    local target="$1"
 
-    sudo zypper --non-interactive repos --details \
-        | awk -v target="$alias" '$1 == target { print $NF; exit }'
+    sudo zypper repos --details 2>/dev/null |
+        awk -F'|' -v target="$target" '
+            NR > 2 {
+                for (i = 1; i <= NF; i++) {
+                    gsub(/^[[:space:]]+|[[:space:]]+$/, "", $i)
+                }
+
+                if ($2 == target) {
+                    print $NF
+                    exit
+                }
+            }
+        '
 }
 
 repo_enabled() {
-    local alias="$1"
+    local target="$1"
 
-    sudo zypper --non-interactive repos --details \
-        | awk -v target="$alias" '
-            $1 == target {
+    sudo zypper repos --details 2>/dev/null |
+        awk -F'|' -v target="$target" '
+            NR > 2 {
                 for (i = 1; i <= NF; i++) {
-                    if ($i == "Yes") {
-                        print "yes"
-                        exit
-                    }
+                    gsub(/^[[:space:]]+|[[:space:]]+$/, "", $i)
                 }
-                print "no"
-                exit
+
+                if ($2 == target) {
+                    if ($4 == "Yes") {
+                        found = 1
+                    }
+
+                    exit
+                }
             }
-        ' \
-        | grep -qx "yes"
+
+            END {
+                exit !found
+            }
+        '
 }
 
 add_repo() {
     local alias="$1"
     local uri="$2"
+
+    # --------------------------------------------------------
+    # Existing repository
+    # --------------------------------------------------------
 
     if repo_exists "$alias"; then
         log "Repository '$alias' already exists."
@@ -91,8 +112,8 @@ add_repo() {
             log "  $existing_uri"
         fi
 
-        # Do not silently replace an existing repository with the
-        # same alias but a different URI.
+        # Do not silently replace a repository with the same
+        # alias but a different URI.
         if [[ -n "$existing_uri" && "$existing_uri" != "$uri" ]]; then
             die "Repository '$alias' already exists with a different URI."
         fi
@@ -104,10 +125,14 @@ add_repo() {
             modifyrepo \
             --enable \
             --refresh \
-            "$alias" >/dev/null
+            "$alias"
 
         return 0
     fi
+
+    # --------------------------------------------------------
+    # New repository
+    # --------------------------------------------------------
 
     log "Adding repository '$alias'..."
     log "  $uri"
@@ -124,11 +149,15 @@ add_repo() {
 }
 
 # ------------------------------------------------------------
-# Configure repositories
+# Preconditions
 # ------------------------------------------------------------
 
 command -v zypper >/dev/null 2>&1 \
     || die "zypper is not available."
+
+# ------------------------------------------------------------
+# Configure repositories
+# ------------------------------------------------------------
 
 for alias in "${REPO_ALIASES[@]}"; do
     add_repo "$alias" "${REPO_URLS[$alias]}"
@@ -152,6 +181,7 @@ sudo zypper \
 log "Verifying configured repositories..."
 
 for alias in "${REPO_ALIASES[@]}"; do
+
     if ! repo_exists "$alias"; then
         die "Repository '$alias' was not found after configuration."
     fi
@@ -160,7 +190,19 @@ for alias in "${REPO_ALIASES[@]}"; do
         die "Repository '$alias' is not enabled."
     fi
 
-    log "[ok] Repository '$alias' is present and enabled."
+    actual_uri="$(repo_uri "$alias")"
+
+    if [[ -z "$actual_uri" ]]; then
+        die "Repository '$alias' has no detectable URI."
+    fi
+
+    if [[ "$actual_uri" != "${REPO_URLS[$alias]}" ]]; then
+        die "Repository '$alias' has an unexpected URI:
+Expected: ${REPO_URLS[$alias]}
+Actual:   $actual_uri"
+    fi
+
+    log "[ok] Repository '$alias' is present, enabled, and has the expected URI."
 done
 
 # ------------------------------------------------------------
