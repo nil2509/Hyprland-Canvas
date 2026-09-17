@@ -6,10 +6,24 @@ source "$SCRIPT_DIR/common.sh"
 
 log "Configuring Zsh environment..."
 
-command -v zsh >/dev/null 2>&1 || die "zsh is not installed."
-command -v git >/dev/null 2>&1 || die "git is not installed."
-command -v curl >/dev/null 2>&1 || die "curl is not installed."
-command -v fc-cache >/dev/null 2>&1 || die "fontconfig is not installed."
+# ------------------------------------------------------------
+# Required commands
+# ------------------------------------------------------------
+
+command -v zsh >/dev/null 2>&1 \
+    || die "zsh is not installed."
+
+command -v git >/dev/null 2>&1 \
+    || die "git is not installed."
+
+command -v curl >/dev/null 2>&1 \
+    || die "curl is not installed."
+
+command -v unzip >/dev/null 2>&1 \
+    || die "unzip is not installed."
+
+command -v fc-cache >/dev/null 2>&1 \
+    || die "fontconfig is not installed."
 
 ZSH_PATH="$(command -v zsh)"
 ZSH_DIR="$HOME/.oh-my-zsh"
@@ -23,7 +37,7 @@ log "Zsh: $ZSH_PATH"
 # ------------------------------------------------------------
 
 if [[ -d "$ZSH_DIR" ]]; then
-    log "Oh My Zsh is already installed."
+    log "[ok] Oh My Zsh is already installed."
 else
     log "Installing Oh My Zsh..."
 
@@ -34,7 +48,7 @@ else
     [[ -d "$ZSH_DIR" ]] \
         || die "Oh My Zsh installation failed."
 
-    log "Oh My Zsh installed."
+    log "[ok] Oh My Zsh installed."
 fi
 
 # ------------------------------------------------------------
@@ -42,15 +56,20 @@ fi
 # ------------------------------------------------------------
 
 if [[ -d "$P10K_DIR" ]]; then
-    log "Powerlevel10k is already installed."
+    log "[ok] Powerlevel10k is already installed."
 else
     log "Installing Powerlevel10k..."
+
+    mkdir -p "$(dirname "$P10K_DIR")"
 
     git clone --depth=1 \
         https://github.com/romkatv/powerlevel10k.git \
         "$P10K_DIR"
 
-    log "Powerlevel10k installed."
+    [[ -d "$P10K_DIR" ]] \
+        || die "Powerlevel10k installation failed."
+
+    log "[ok] Powerlevel10k installed."
 fi
 
 # ------------------------------------------------------------
@@ -63,43 +82,56 @@ FONT_DIR="$HOME/.local/share/fonts/$FONT_NAME"
 FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/v${FONT_VERSION}/${FONT_NAME}.zip"
 
 if fc-list | grep -qi "Annotation Mono"; then
-    log "Annotation Mono Nerd Font is already installed."
+    log "[ok] Annotation Mono Nerd Font is already installed."
 else
     log "Installing Annotation Mono Nerd Font..."
 
     TEMP_DIR="$(mktemp -d)"
-    trap 'rm -rf "$TEMP_DIR"' EXIT
+
+    cleanup_font_install() {
+        rm -rf "$TEMP_DIR"
+    }
+
+    trap cleanup_font_install EXIT
 
     FONT_ZIP="$TEMP_DIR/${FONT_NAME}.zip"
 
     curl -fL "$FONT_URL" -o "$FONT_ZIP"
 
     mkdir -p "$FONT_DIR"
+
     unzip -q "$FONT_ZIP" -d "$FONT_DIR"
 
     fc-cache -f "$HOME/.local/share/fonts"
 
     if fc-list | grep -qi "Annotation Mono"; then
-        log "Annotation Mono Nerd Font installed."
+        log "[ok] Annotation Mono Nerd Font installed."
     else
         die "Annotation Mono Nerd Font installation failed."
     fi
-fi
+
+    trap - EXIT
+    cleanup_font_install
+}
 
 # ------------------------------------------------------------
 # Zsh configuration
 # ------------------------------------------------------------
 
-ZSHRC="$HOME/.zshrc"
+ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
-log "Configuring ~/.zshrc..."
+MANAGED_START="# >>> Hyprland-Canvas managed configuration >>>"
+MANAGED_END="# <<< Hyprland-Canvas managed configuration <<<"
 
-cat > "$ZSHRC" <<'EOF'
-# ------------------------------------------------------------
-# Oh My Zsh
-# ------------------------------------------------------------
+log "Configuring Zsh: $ZSHRC"
 
-export ZSH="$HOME/.oh-my-zsh"
+if [[ ! -f "$ZSHRC" ]]; then
+    log "No existing .zshrc found; creating one."
+
+    cat > "$ZSHRC" <<EOF
+# Hyprland-Canvas Zsh configuration
+
+export ZSH="\$HOME/.oh-my-zsh"
 
 ZSH_THEME="powerlevel10k/powerlevel10k"
 
@@ -109,28 +141,46 @@ plugins=(
     extract
 )
 
-source "$ZSH/oh-my-zsh.sh"
+source "\$ZSH/oh-my-zsh.sh"
 
-# ------------------------------------------------------------
-# Cargo
-# ------------------------------------------------------------
+$MANAGED_START
 
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="\$HOME/.cargo/bin:\$PATH"
 
-# ------------------------------------------------------------
-# zoxide
-# ------------------------------------------------------------
+eval "\$(zoxide init zsh)"
 
-eval "$(zoxide init zsh)"
+[[ -f "\$HOME/.p10k.zsh" ]] && source "\$HOME/.p10k.zsh"
 
-# ------------------------------------------------------------
-# Powerlevel10k
-# ------------------------------------------------------------
-
-[[ -f "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
+$MANAGED_END
 EOF
 
-log "Zsh configuration written."
+    log "[ok] Created $ZSHRC."
+
+else
+    log "Existing .zshrc found; preserving existing configuration."
+
+    if grep -Fqx "$MANAGED_START" "$ZSHRC"; then
+        log "[ok] Hyprland-Canvas configuration block already exists."
+
+    else
+        log "Adding Hyprland-Canvas configuration block..."
+
+        cat >> "$ZSHRC" <<EOF
+
+$MANAGED_START
+
+export PATH="\$HOME/.cargo/bin:\$PATH"
+
+eval "\$(zoxide init zsh)"
+
+[[ -f "\$HOME/.p10k.zsh" ]] && source "\$HOME/.p10k.zsh"
+
+$MANAGED_END
+EOF
+
+        log "[ok] Hyprland-Canvas configuration block added."
+    fi
+fi
 
 # ------------------------------------------------------------
 # Default shell
@@ -139,7 +189,7 @@ log "Zsh configuration written."
 CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
 
 if [[ "$CURRENT_SHELL" == "$ZSH_PATH" ]]; then
-    log "Zsh is already the default shell."
+    log "[ok] Zsh is already the default shell."
 else
     log "Setting Zsh as the default shell..."
 
@@ -148,11 +198,15 @@ else
     NEW_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
 
     if [[ "$NEW_SHELL" == "$ZSH_PATH" ]]; then
-        log "Zsh is now the default shell."
+        log "[ok] Zsh is now the default shell."
     else
         die "Failed to set Zsh as the default shell."
     fi
 fi
+
+# ------------------------------------------------------------
+# Summary
+# ------------------------------------------------------------
 
 log "Shell configuration complete."
 log ""
@@ -161,6 +215,6 @@ log "Oh My Zsh:     $ZSH_DIR"
 log "Powerlevel10k: $P10K_DIR"
 log "Font:          Annotation Mono Nerd Font"
 log ""
-log "Run 'p10k configure' after installation to create your Powerlevel10k prompt configuration."
+log "Run 'p10k configure' after installation if you want to configure the prompt."
 
 exit 0

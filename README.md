@@ -30,7 +30,7 @@ The bootstrap sets up:
 * Cargo tools
 * Wayland/XDG desktop integration
 * AMD graphics/Vulkan support
-* Optional Flatpak setup
+* Flatpak + Flathub
 * Optional HyprMod integration
 
 DMS provides the desktop shell layer, including the bar, launcher, notifications, session/lock functionality, and system controls. DMS is designed to replace the collection of traditional components normally used for these functions.
@@ -71,6 +71,8 @@ Stages should avoid unnecessarily overwriting existing user configuration.
 ### Optional by design
 
 Optional packages and components are controlled from the main installer rather than prompting independently in multiple stages.
+
+Core desktop infrastructure is installed regardless of the optional-component selection.
 
 ### Blank canvas
 
@@ -200,15 +202,22 @@ Depending on the selected installer option:
 
 * Additional command-line utilities
 * Development tools
-* Flatpak setup
 * HyprMod
 
-HyprMod is installed through `uv` when optional components are enabled.
+Flatpak and Flathub are **not optional**. They are part of the core system foundation and are configured by `13-flatpak.sh` on every installation.
 
-Its current upstream installation flow uses:
+---
+
+# HyprMod
+
+HyprMod is an optional Hyprland settings application.
+
+When optional components are enabled, the installer uses the current upstream HyprMod installer and then registers its desktop entry.
+
+The upstream installation method is:
 
 ```bash
-uv tool install git+https://github.com/BlueManCZ/hyprmod.git
+curl -LsSf https://raw.githubusercontent.com/BlueManCZ/hyprmod/main/install.sh | sh
 ```
 
 followed by:
@@ -216,6 +225,8 @@ followed by:
 ```bash
 hyprmod --install
 ```
+
+HyprMod remains separate from the core desktop foundation and is therefore skipped when optional components are disabled.
 
 ---
 
@@ -279,13 +290,15 @@ Hyprland (UWSM session)
 DMS / Quickshell
 ```
 
-The installer creates or verifies the Hyprland UWSM Wayland session.
+The installer verifies the Hyprland UWSM Wayland session provided by the installed Hyprland/UWSM integration.
 
-The expected session entry launches:
+The expected UWSM session entry launches Hyprland through UWSM:
 
 ```text
-uwsm start -- hyprland.desktop
+uwsm start
 ```
+
+with the Hyprland desktop entry as its session target.
 
 This keeps compositor startup under UWSM rather than launching Hyprland directly from SDDM.
 
@@ -310,6 +323,8 @@ wireplumber.service
 ```
 
 These are backend services. They are not intended to be replaced by shell-specific applets.
+
+DMS is attached to the graphical user session and is started through the systemd graphical-session lifecycle rather than being manually launched as a normal system service during installation.
 
 ---
 
@@ -421,6 +436,32 @@ Matugen is part of the **core Cargo toolset**, rather than an optional component
 
 ---
 
+# Flatpak
+
+Flatpak is part of the **core installation**.
+
+The bootstrap installs Flatpak and configures the system Flathub remote.
+
+The configuration is handled by:
+
+```text
+13-flatpak.sh
+```
+
+The installer does not install specific Flatpak applications. It simply provides the Flatpak foundation and Flathub repository so applications can be installed later.
+
+The configured remote is:
+
+```text
+flathub
+```
+
+using the official Flathub repository.
+
+Flatpak configuration therefore occurs regardless of whether optional packages are enabled.
+
+---
+
 # Configuration
 
 The repository deliberately does **not** ship a finished Hyprland rice.
@@ -484,6 +525,8 @@ It checks the resulting installation for things such as:
 * Power Profiles Daemon
 * User PipeWire/WirePlumber units
 * Hyprland systemd session integration
+* Flatpak
+* Flathub
 * Optional HyprMod
 * Required user configuration directories
 

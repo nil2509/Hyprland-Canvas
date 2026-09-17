@@ -2,14 +2,14 @@
 
 # ============================================================
 # openSUSE Hyprland Desktop Bootstrap
-# 04-session.sh
+# 06-session.sh
 # ============================================================
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$SCRIPT_DIR/common.sh"
 
-log "Configuring Hyprland session..."
+log "Verifying Hyprland UWSM session..."
 
 # ------------------------------------------------------------
 # Required commands
@@ -34,7 +34,7 @@ HYPRLAND_SESSION="$WAYLAND_SESSION_DIR/hyprland.desktop"
 UWSM_SESSION="$WAYLAND_SESSION_DIR/hyprland-uwsm.desktop"
 
 # ------------------------------------------------------------
-# Verify the distro-provided Hyprland session
+# Verify distro-provided Hyprland session
 # ------------------------------------------------------------
 
 if [[ ! -f "$HYPRLAND_SESSION" ]]; then
@@ -45,60 +45,64 @@ log "Found Hyprland session:"
 log "  $HYPRLAND_SESSION"
 
 # ------------------------------------------------------------
-# Create UWSM session entry
-# ------------------------------------------------------------
-
-if [[ -f "$UWSM_SESSION" ]]; then
-    log "Found existing UWSM Hyprland session:"
-    log "  $UWSM_SESSION"
-else
-    log "UWSM Hyprland session entry not found."
-    log "Creating:"
-    log "  $UWSM_SESSION"
-
-    sudo tee "$UWSM_SESSION" >/dev/null <<'EOF'
-[Desktop Entry]
-Name=Hyprland (UWSM)
-Comment=Hyprland compositor managed by UWSM
-Exec=uwsm start -- hyprland.desktop
-TryExec=uwsm
-Type=Application
-DesktopNames=Hyprland
-EOF
-
-    log "UWSM Hyprland session entry created."
-fi
-
-# ------------------------------------------------------------
-# Verify UWSM session entry
+# Verify distro-provided UWSM session
 # ------------------------------------------------------------
 
 if [[ ! -f "$UWSM_SESSION" ]]; then
-    die "Failed to create UWSM Hyprland session entry: $UWSM_SESSION"
+    die "UWSM Hyprland session entry was not found: $UWSM_SESSION"
 fi
 
-if ! sudo grep -q '^Exec=uwsm start -- hyprland\.desktop$' "$UWSM_SESSION"; then
-    die "UWSM session entry has an unexpected Exec line."
+log "Found UWSM Hyprland session:"
+log "  $UWSM_SESSION"
+
+# ------------------------------------------------------------
+# Verify UWSM session contents
+# ------------------------------------------------------------
+
+if ! grep -qE '^Exec=uwsm[[:space:]]+start[[:space:]]+.*hyprland\.desktop' \
+    "$UWSM_SESSION"; then
+    die "UWSM session entry does not launch Hyprland through UWSM."
 fi
 
-if ! sudo grep -q '^TryExec=uwsm$' "$UWSM_SESSION"; then
+if ! grep -q '^TryExec=uwsm$' "$UWSM_SESSION"; then
     die "UWSM session entry is missing TryExec=uwsm."
 fi
 
+if ! grep -q '^Type=Application$' "$UWSM_SESSION"; then
+    die "UWSM session entry is missing Type=Application."
+fi
+
 log "Verified UWSM session entry."
+
+# ------------------------------------------------------------
+# Verify the Hyprland session is not bypassing UWSM
+# ------------------------------------------------------------
+
+if grep -qE '^Exec=uwsm[[:space:]]+start' "$HYPRLAND_SESSION"; then
+    log "Hyprland session itself is UWSM-managed."
+else
+    log "Hyprland direct session is present separately from UWSM."
+fi
+
+# ------------------------------------------------------------
+# Verify SDDM is available
+# ------------------------------------------------------------
+
+if sudo systemctl is-enabled --quiet sddm.service; then
+    log "SDDM is enabled."
+else
+    die "SDDM is not enabled."
+fi
 
 # ------------------------------------------------------------
 # Summary
 # ------------------------------------------------------------
 
 log "Hyprland UWSM session is ready."
-log "Session entry:"
-log "  $UWSM_SESSION"
-
-log "SDDM is enabled."
-log "At login, select:"
-log "  Hyprland (UWSM)"
-
-log "Hyprland session configuration complete."
+log ""
+log "SDDM session to select:"
+log "  Hyprland (uwsm-managed)"
+log ""
+log "Hyprland UWSM session verification complete."
 
 exit 0

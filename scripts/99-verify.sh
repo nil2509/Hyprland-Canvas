@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-# ============================================================
-
-# openSUSE Hyprland Desktop Bootstrap
-
-# 99-verify.sh
-
-# ============================================================
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$SCRIPT_DIR/common.sh"
@@ -17,9 +9,7 @@ log "Running final installation verification..."
 FAILED=0
 
 # ------------------------------------------------------------
-
 # Helpers
-
 # ------------------------------------------------------------
 
 pass() {
@@ -36,9 +26,7 @@ warn() {
 }
 
 # ------------------------------------------------------------
-
 # Required commands
-
 # ------------------------------------------------------------
 
 log "Checking required commands..."
@@ -55,6 +43,9 @@ REQUIRED_COMMANDS=(
     xdg-user-dirs-update
     xdg-user-dir
     systemctl
+    rpm
+    fc-list
+    flatpak
 )
 
 for command_name in "${REQUIRED_COMMANDS[@]}"; do
@@ -66,9 +57,7 @@ for command_name in "${REQUIRED_COMMANDS[@]}"; do
 done
 
 # ------------------------------------------------------------
-
-# SDDM configuration
-
+# SDDM
 # ------------------------------------------------------------
 
 log "Checking SDDM configuration..."
@@ -82,8 +71,8 @@ else
 fi
 
 if [[ -f "$SDDM_CONF" ]] && \
-    grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
-    pass "SDDM is configured to use a Wayland display server."
+    sudo grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
+    pass "SDDM is configured to use Wayland."
 else
     fail "SDDM Wayland configuration is missing."
 fi
@@ -103,9 +92,7 @@ else
 fi
 
 # ------------------------------------------------------------
-
 # Hyprland / UWSM session
-
 # ------------------------------------------------------------
 
 log "Checking Hyprland UWSM session..."
@@ -116,21 +103,21 @@ HYPRLAND_SESSION="$WAYLAND_SESSION_DIR/hyprland.desktop"
 UWSM_SESSION="$WAYLAND_SESSION_DIR/hyprland-uwsm.desktop"
 
 if [[ -f "$HYPRLAND_SESSION" ]]; then
-    pass "Hyprland session exists: $HYPRLAND_SESSION"
+    pass "Hyprland session exists."
 else
-    fail "Hyprland session was not found: $HYPRLAND_SESSION"
+    fail "Hyprland session was not found."
 fi
 
 if [[ -f "$UWSM_SESSION" ]]; then
-    pass "UWSM Hyprland session exists: $UWSM_SESSION"
+    pass "UWSM Hyprland session exists."
 else
-    fail "UWSM Hyprland session was not found: $UWSM_SESSION"
+    fail "UWSM Hyprland session was not found."
 fi
 
 if [[ -f "$UWSM_SESSION" ]] && \
-    grep -qE '^Exec=uwsm[[:space:]]+start[[:space:]]+--[[:space:]]+hyprland.desktop$' \
+    grep -qE '^Exec=uwsm[[:space:]]+start[[:space:]]+' \
     "$UWSM_SESSION"; then
-    pass "UWSM session correctly launches hyprland.desktop."
+    pass "UWSM session launches through uwsm start."
 else
     fail "UWSM session has an unexpected or missing Exec entry."
 fi
@@ -142,10 +129,15 @@ else
     fail "UWSM session is missing TryExec=uwsm."
 fi
 
+if [[ -f "$UWSM_SESSION" ]] && \
+    grep -q '^Type=Application$' "$UWSM_SESSION"; then
+    pass "UWSM session is an Application entry."
+else
+    fail "UWSM session is missing Type=Application."
+fi
+
 # ------------------------------------------------------------
-
-# DankMaterialShell environment
-
+# DMS environment
 # ------------------------------------------------------------
 
 log "Checking DankMaterialShell environment..."
@@ -156,55 +148,87 @@ DMS_ENV_FILE="$DMS_ENV_DIR/90-dms.conf"
 if [[ -d "$DMS_ENV_DIR" ]]; then
     pass "User environment.d directory exists."
 else
-    fail "User environment.d directory was not found: $DMS_ENV_DIR"
+    fail "User environment.d directory was not found."
 fi
 
 if [[ -f "$DMS_ENV_FILE" ]]; then
-    pass "DMS environment configuration exists: $DMS_ENV_FILE"
+    pass "DMS environment configuration exists."
 else
-    fail "DMS environment configuration was not found: $DMS_ENV_FILE"
+    fail "DMS environment configuration was not found."
 fi
 
 if [[ -f "$DMS_ENV_FILE" ]] && \
     grep -q '^QT_QPA_PLATFORM=wayland$' "$DMS_ENV_FILE"; then
     pass "QT_QPA_PLATFORM=wayland is configured."
 else
-    fail "QT_QPA_PLATFORM=wayland is missing from DMS environment."
+    fail "QT_QPA_PLATFORM=wayland is missing."
 fi
 
 if [[ -f "$DMS_ENV_FILE" ]] && \
     grep -q '^TERMINAL=kitty$' "$DMS_ENV_FILE"; then
     pass "TERMINAL=kitty is configured."
 else
-    fail "TERMINAL=kitty is missing from DMS environment."
+    fail "TERMINAL=kitty is missing."
 fi
 
 # ------------------------------------------------------------
-
 # DMS Hyprland configuration
-
 # ------------------------------------------------------------
 
 log "Checking DMS Hyprland configuration..."
 
 DMS_HYPR_DIR="$HOME/.config/hypr/dms"
 
-if command -v dms >/dev/null 2>&1; then
-    pass "DankMaterialShell is available."
+if [[ -d "$DMS_HYPR_DIR" ]]; then
+    pass "DMS Hyprland configuration directory exists."
 else
-    fail "DankMaterialShell was not found."
+    fail "DMS Hyprland configuration directory was not found."
 fi
 
-if [[ -d "$DMS_HYPR_DIR" ]]; then
-    pass "DMS Hyprland configuration exists: $DMS_HYPR_DIR"
+DMS_HYPR_FILES=(
+    binds.conf
+    colors.conf
+    layout.conf
+    outputs.conf
+    cursor.conf
+    windowrules.conf
+)
+
+for file in "${DMS_HYPR_FILES[@]}"; do
+    if [[ -f "$DMS_HYPR_DIR/$file" ]]; then
+        pass "DMS generated $file."
+    else
+        warn "DMS configuration file was not generated: $file"
+    fi
+done
+
+# ------------------------------------------------------------
+# DMS systemd service
+# ------------------------------------------------------------
+
+log "Checking DMS user service..."
+
+if systemctl --user cat dms.service >/dev/null 2>&1; then
+    pass "DMS user service is installed."
 else
-    fail "DMS Hyprland configuration directory was not found: $DMS_HYPR_DIR"
+    fail "DMS user service is not available."
+fi
+
+if systemctl --user is-enabled --quiet dms.service; then
+    pass "DMS user service is enabled."
+else
+    fail "DMS user service is not enabled."
+fi
+
+if systemctl --user is-active --quiet dms.service; then
+    pass "DMS user service is active."
+else
+    warn "DMS user service is not currently active."
+    warn "This is expected when verification runs outside the graphical UWSM session."
 fi
 
 # ------------------------------------------------------------
-
 # XDG user directories
-
 # ------------------------------------------------------------
 
 log "Checking XDG user directories..."
@@ -212,15 +236,32 @@ log "Checking XDG user directories..."
 USER_DIRS_FILE="$HOME/.config/user-dirs.dirs"
 
 if [[ -f "$USER_DIRS_FILE" ]]; then
-    pass "XDG user directories configuration exists: $USER_DIRS_FILE"
+    pass "XDG user directories configuration exists."
 else
-    fail "XDG user directories configuration was not found: $USER_DIRS_FILE"
+    fail "XDG user directories configuration was not found."
 fi
 
+XDG_USER_DIRS=(
+    DESKTOP
+    DOWNLOAD
+    TEMPLATES
+    PUBLICSHARE
+    DOCUMENTS
+    MUSIC
+    PICTURES
+    VIDEOS
+)
+
+for directory_name in "${XDG_USER_DIRS[@]}"; do
+    if grep -qE "^XDG_${directory_name}_DIR=" "$USER_DIRS_FILE" 2>/dev/null; then
+        pass "XDG_${directory_name}_DIR is configured."
+    else
+        warn "XDG_${directory_name}_DIR is not configured."
+    fi
+done
+
 # ------------------------------------------------------------
-
 # Cargo-installed tools
-
 # ------------------------------------------------------------
 
 log "Checking Cargo-installed tools..."
@@ -235,16 +276,14 @@ CARGO_BINARIES=(
 
 for binary in "${CARGO_BINARIES[@]}"; do
     if [[ -x "$CARGO_BIN_DIR/$binary" ]]; then
-        pass "Cargo binary exists: $CARGO_BIN_DIR/$binary"
+        pass "Cargo binary exists: $binary"
     else
         fail "Cargo binary was not found: $CARGO_BIN_DIR/$binary"
     fi
 done
 
 # ------------------------------------------------------------
-
 # Zsh / Oh My Zsh / Powerlevel10k
-
 # ------------------------------------------------------------
 
 log "Checking shell configuration..."
@@ -252,30 +291,30 @@ log "Checking shell configuration..."
 ZSH_PATH="$(command -v zsh || true)"
 ZSH_DIR="$HOME/.oh-my-zsh"
 P10K_DIR="$ZSH_DIR/custom/themes/powerlevel10k"
-ZSHRC="$HOME/.zshrc"
+ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
 if [[ -n "$ZSH_PATH" ]]; then
-    pass "Zsh executable exists: $ZSH_PATH"
+    pass "Zsh executable exists."
 else
     fail "Zsh executable was not found."
 fi
 
 if [[ -f "$ZSHRC" ]]; then
-    pass "Zsh configuration exists: $ZSHRC"
+    pass "Zsh configuration exists."
 else
-    fail "Zsh configuration was not found: $ZSHRC"
+    fail "Zsh configuration was not found."
 fi
 
 if [[ -d "$ZSH_DIR" ]]; then
-    pass "Oh My Zsh installation exists: $ZSH_DIR"
+    pass "Oh My Zsh installation exists."
 else
-    fail "Oh My Zsh installation was not found: $ZSH_DIR"
+    fail "Oh My Zsh installation was not found."
 fi
 
 if [[ -d "$P10K_DIR" ]]; then
-    pass "Powerlevel10k installation exists: $P10K_DIR"
+    pass "Powerlevel10k installation exists."
 else
-    fail "Powerlevel10k installation was not found: $P10K_DIR"
+    fail "Powerlevel10k installation was not found."
 fi
 
 CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
@@ -295,9 +334,9 @@ fi
 
 if [[ -f "$ZSHRC" ]] && \
     grep -q 'export PATH=.*\.cargo/bin' "$ZSHRC"; then
-    pass "Cargo bin directory is added to the Zsh PATH."
+    pass "Cargo bin directory is configured in Zsh."
 else
-    fail "Cargo bin directory is missing from the Zsh PATH."
+    fail "Cargo bin directory is missing from Zsh configuration."
 fi
 
 if [[ -f "$ZSHRC" ]] && \
@@ -308,88 +347,88 @@ else
 fi
 
 # ------------------------------------------------------------
-
 # Annotation Mono Nerd Font
-
 # ------------------------------------------------------------
 
 log "Checking Annotation Mono Nerd Font..."
 
-if command -v fc-list >/dev/null 2>&1 && \
-    fc-list | grep -qi "Annotation Mono"; then
+if fc-list | grep -qi "Annotation Mono"; then
     pass "Annotation Mono Nerd Font is installed."
 else
     fail "Annotation Mono Nerd Font was not found."
 fi
 
 # ------------------------------------------------------------
-
-# Kitty configuration
-
+# Kitty
 # ------------------------------------------------------------
 
 log "Checking Kitty configuration..."
 
-KITTY_CONF="$HOME/.config/kitty/kitty.conf"
+KITTY_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
 
 if [[ -f "$KITTY_CONF" ]]; then
-    pass "Kitty configuration exists: $KITTY_CONF"
+    pass "Kitty configuration exists."
 else
-    fail "Kitty configuration was not found: $KITTY_CONF"
+    fail "Kitty configuration was not found."
 fi
 
 if [[ -f "$KITTY_CONF" ]] && \
-    grep -Eq '^[[:space:]]*font_family[[:space:]]+AnnotationMono Nerd Font([[:space:]]*)$' \
+    grep -Eq \
+    '^[[:space:]]*font_family[[:space:]]+AnnotationMono Nerd Font([[:space:]]*)$' \
     "$KITTY_CONF"; then
-    pass "Kitty is configured to use AnnotationMono Nerd Font."
+    pass "Kitty is configured for AnnotationMono Nerd Font."
 else
     fail "Kitty AnnotationMono Nerd Font configuration is missing."
 fi
 
 # ------------------------------------------------------------
-
 # zram
-
 # ------------------------------------------------------------
 
 log "Checking zram configuration..."
 
 ZRAM_CONF="/etc/systemd/zram-generator.conf"
 
-if command -v rpm >/dev/null 2>&1 && \
-    rpm -q zram-generator >/dev/null 2>&1; then
-
+if rpm -q zram-generator >/dev/null 2>&1; then
     pass "zram-generator is installed."
-
-    if [[ -f "$ZRAM_CONF" ]]; then
-        pass "zram configuration exists."
-
-        if grep -q '^zram-size = ram / 2$' "$ZRAM_CONF"; then
-            pass "zram size is configured to half of RAM."
-        else
-            warn "zram size is not configured to half of RAM."
-        fi
-
-        if grep -q '^compression-algorithm = zstd$' "$ZRAM_CONF"; then
-            pass "zram compression is configured as zstd."
-        else
-            warn "zram compression is not configured as zstd."
-        fi
-    else
-        fail "zram-generator is installed but its configuration is missing."
-    fi
-
 else
     fail "zram-generator is not installed."
 fi
 
+if [[ -f "$ZRAM_CONF" ]]; then
+    pass "zram configuration exists."
+else
+    fail "zram configuration was not found."
+fi
+
+if [[ -f "$ZRAM_CONF" ]] && \
+    grep -q '^zram-size = ram / 2$' "$ZRAM_CONF"; then
+    pass "zram size is configured to half of RAM."
+else
+    warn "zram size is not configured to half of RAM."
+fi
+
+if [[ -f "$ZRAM_CONF" ]] && \
+    grep -q '^compression-algorithm = zstd$' "$ZRAM_CONF"; then
+    pass "zram compression is configured as zstd."
+else
+    warn "zram compression is not configured as zstd."
+fi
+
+if command -v zramctl >/dev/null 2>&1; then
+    if zramctl /dev/zram0 >/dev/null 2>&1; then
+        pass "/dev/zram0 is currently active."
+    else
+        warn "/dev/zram0 is not currently active."
+        warn "This can be expected before the first reboot."
+    fi
+fi
+
+# ------------------------------------------------------------
+# Required system services
 # ------------------------------------------------------------
 
-# System services
-
-# ------------------------------------------------------------
-
-log "Checking system-level backend services..."
+log "Checking required system services..."
 
 SYSTEM_SERVICES=(
     NetworkManager.service
@@ -401,7 +440,8 @@ for service in "${SYSTEM_SERVICES[@]}"; do
     if systemctl cat "$service" >/dev/null 2>&1; then
         pass "$service is installed."
     else
-        fail "$service was not found."
+        fail "$service is not installed."
+        continue
     fi
 
     if sudo systemctl is-enabled --quiet "$service"; then
@@ -409,56 +449,71 @@ for service in "${SYSTEM_SERVICES[@]}"; do
     else
         fail "$service is not enabled."
     fi
+
+    if sudo systemctl is-active --quiet "$service"; then
+        pass "$service is active."
+    else
+        fail "$service is not active."
+    fi
 done
 
 # ------------------------------------------------------------
-
-# User-level PipeWire/WirePlumber
-
+# Required user services
 # ------------------------------------------------------------
 
-log "Checking user-level PipeWire/WirePlumber services..."
+log "Checking required user services..."
 
 USER_SERVICES=(
     pipewire.service
     pipewire-pulse.service
     wireplumber.service
+    hyprpolkitagent.service
 )
 
 for service in "${USER_SERVICES[@]}"; do
     if systemctl --user cat "$service" >/dev/null 2>&1; then
-        pass "$service unit is accessible."
+        pass "$service is installed."
     else
-        warn "$service unit could not be queried from the current user manager."
+        fail "$service is not available."
+        continue
+    fi
+
+    if systemctl --user is-enabled --quiet "$service"; then
+        pass "$service is enabled."
+    else
+        fail "$service is not enabled."
+    fi
+
+    if systemctl --user is-active --quiet "$service"; then
+        pass "$service is active."
+    else
+        warn "$service is not currently active."
     fi
 done
 
 # ------------------------------------------------------------
-
-# User systemd integration
-
+# Flatpak / Flathub
 # ------------------------------------------------------------
 
-log "Checking user systemd integration..."
+log "Checking Flatpak..."
 
-if systemctl --user cat hyprland-session.target >/dev/null 2>&1; then
-    pass "hyprland-session.target is available to the user manager."
+if flatpak remotes --system --columns=name 2>/dev/null | \
+    grep -qx "flathub"; then
+    pass "Flathub system remote is configured."
 else
-    warn "hyprland-session.target could not be queried from the current user manager."
+    fail "Flathub system remote is not configured."
 fi
 
 # ------------------------------------------------------------
-
 # Optional HyprMod
-
 # ------------------------------------------------------------
 
-log "Checking optional HyprMod..."
+log "Checking optional components..."
 
 if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
 
     if command -v hyprmod >/dev/null 2>&1; then
-        pass "Optional HyprMod is installed."
+        pass "HyprMod is installed."
 
         XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
         HYPRMOD_DESKTOP="$XDG_DATA_HOME/applications/hyprmod.desktop"
@@ -466,20 +521,19 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
         if [[ -f "$HYPRMOD_DESKTOP" ]]; then
             pass "HyprMod desktop entry exists."
         else
-            warn "HyprMod is installed but its desktop entry was not found."
+            warn "HyprMod desktop entry was not found."
         fi
     else
-        warn "Optional HyprMod was requested but is not installed."
+        fail "HyprMod was requested but is not installed."
     fi
 
 else
-    log "HyprMod was not requested; skipping verification."
+    log "Optional components were not requested."
+    log "Skipping HyprMod verification."
 fi
 
 # ------------------------------------------------------------
-
 # User configuration directories
-
 # ------------------------------------------------------------
 
 log "Checking user configuration directories..."
@@ -500,9 +554,7 @@ for directory in "${USER_CONFIG_DIRS[@]}"; do
 done
 
 # ------------------------------------------------------------
-
 # Final result
-
 # ------------------------------------------------------------
 
 log ""
@@ -514,6 +566,8 @@ if [[ "$FAILED" -eq 0 ]]; then
     log "All required installation checks passed."
     log ""
     log "A reboot is recommended before starting the new session."
+    log "After reboot, select:"
+    log "  Hyprland (uwsm-managed)"
     exit 0
 fi
 

@@ -43,23 +43,6 @@ if [[ "${ID:-}" != "opensuse-tumbleweed" ]]; then
 fi
 
 # ------------------------------------------------------------
-# Curl
-# ------------------------------------------------------------
-
-if ! command -v curl >/dev/null 2>&1; then
-    log "curl is not installed. Installing it now..."
-
-    sudo zypper --non-interactive install curl
-
-    command -v curl >/dev/null 2>&1 \
-        || die "Failed to install curl."
-
-    log "curl installed successfully."
-else
-    log "curl is already installed."
-fi
-
-# ------------------------------------------------------------
 # Architecture
 # ------------------------------------------------------------
 
@@ -82,8 +65,45 @@ if [[ -z "${HOME:-}" ]]; then
     die "HOME is not set."
 fi
 
+if [[ ! -d "$HOME" ]]; then
+    die "Home directory does not exist: $HOME"
+fi
+
+if [[ ! -w "$HOME" ]]; then
+    die "Home directory is not writable: $HOME"
+fi
+
+CURRENT_USER="$(id -un)"
+
+if [[ -z "$CURRENT_USER" ]]; then
+    die "Could not determine the current user."
+fi
+
 if [[ "$(id -u)" -lt 1000 ]]; then
     log "Warning: current user has an unusually low UID ($(id -u))."
+fi
+
+# ------------------------------------------------------------
+# Required tools for later stages
+# ------------------------------------------------------------
+
+# These are checked here but are NOT installed here.
+# System changes begin only after the snapshot stage.
+
+command -v bash >/dev/null 2>&1 \
+    || die "bash is required."
+
+command -v git >/dev/null 2>&1 \
+    || die "git is required."
+
+command -v systemctl >/dev/null 2>&1 \
+    || die "systemctl is required."
+
+if command -v curl >/dev/null 2>&1; then
+    log "curl is already installed."
+else
+    log "curl is not currently installed."
+    log "It will be installed by 03-packages.sh."
 fi
 
 # ------------------------------------------------------------
@@ -92,11 +112,19 @@ fi
 
 log "Checking network connectivity..."
 
-if curl -fsSI --max-time 10 https://download.opensuse.org >/dev/null 2>&1; then
-    log "Network connectivity check passed."
+if command -v curl >/dev/null 2>&1; then
+    if curl -fsSI --max-time 10 \
+        https://download.opensuse.org >/dev/null 2>&1; then
+
+        log "Network connectivity check passed."
+
+    else
+        log "Warning: direct connectivity check to download.opensuse.org failed."
+        log "Continuing; zypper will perform the definitive repository check."
+    fi
 else
-    log "Warning: direct connectivity check to download.opensuse.org failed."
-    log "Continuing; zypper will perform the definitive repository connectivity check."
+    log "curl is unavailable; skipping HTTP connectivity check."
+    log "zypper will perform the definitive repository connectivity check."
 fi
 
 # ------------------------------------------------------------
@@ -104,6 +132,7 @@ fi
 # ------------------------------------------------------------
 
 log "Checking sudo access..."
+
 sudo -v
 
 # The master installer owns the long-lived sudo keep-alive.
@@ -134,7 +163,8 @@ if command -v snapper >/dev/null 2>&1; then
         log "Snapper is installed but no usable configuration was detected."
     fi
 else
-    log "Snapper is not installed. Continuing without Snapper."
+    log "Snapper is not installed."
+    log "Continuing; 02-snapshot.sh will determine snapshot availability."
 fi
 
 # ------------------------------------------------------------
@@ -155,7 +185,7 @@ fi
 
 log "Preflight checks passed."
 log "Project directory: $PROJECT_DIR"
-log "User: $USER"
+log "User: $CURRENT_USER"
 log "Architecture: $ARCH"
 log "OS: ${PRETTY_NAME:-unknown}"
 

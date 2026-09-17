@@ -17,63 +17,86 @@ command -v rpm >/dev/null 2>&1 \
 # ------------------------------------------------------------
 
 CORE_PACKAGES=(
+    # Compositor / session
     hyprland
     hyprland-guiutils
     hyprland-qt-support
     hyprsunset
     uwsm
+    xwayland
+
+    # DankMaterialShell
     quickshell
     dgop
     danksearch
     cliphist
     dms
+
+    # Terminal
     kitty
+
+    # Display manager
     sddm
-    xwayland
+
+    # Portals / desktop integration
     xdg-desktop-portal
     xdg-desktop-portal-gtk
     xdg-desktop-portal-hyprland
     xdg-user-dirs
     xdg-utils
+
+    # Wayland utilities
     wl-clipboard
+
+    # Storage / power
     udisks2
     upower
     power-profiles-daemon
+
+    # Networking / Bluetooth
     NetworkManager
     bluez
+
+    # Audio
     pipewire
     pipewire-alsa
     pipewire-pulseaudio
     pipewire-jack
     wireplumber
-    libvulkan_radeon
-    libvulkan_radeon-32bit
-    kernel-firmware-amdgpu
-    ucode-amd
+
+    # Shell / development tools
     zsh
     cargo
+    git
+
+    # Download / archive utilities
+    curl
     wget
     unzip
     tar
     gzip
     zstd
-    git
 )
 
 # ------------------------------------------------------------
 # Extra packages
 #
 # These are part of the standard desktop installation but are
-# separate from the minimal core package set.
+# separate from the compositor/session core.
 # ------------------------------------------------------------
 
 EXTRA_PACKAGES=(
+    # Authentication / desktop integration
     hyprpolkitagent
     gnome-keyring
+
+    # File management
     dolphin
     gwenview
     ark
     kio-extras
+
+    # KDE / Qt / GTK appearance integration
     breeze6
     kf6-breeze-icons
     breeze6-cursors
@@ -81,9 +104,13 @@ EXTRA_PACKAGES=(
     qt6ct
     qt6-imageformats
     qt6-multimedia
+
+    # Thumbnail / image support
     ffmpegthumbs
     kdegraphics-thumbnailers
     kimageformats
+
+    # Desktop utilities
     awww
     cava
     brightnessctl
@@ -91,11 +118,15 @@ EXTRA_PACKAGES=(
     grim
     slurp
     wf-recorder
+
+    # Fonts
     google-noto-fonts
     google-noto-sans-cjk-fonts
     google-noto-coloremoji-fonts
     dejavu-fonts
     liberation-fonts
+
+    # System utilities
     zram-generator
     fwupd
     flatpak
@@ -199,7 +230,7 @@ REQUIRED_PACKAGES=(
 
 for package in "${REQUIRED_PACKAGES[@]}"; do
     if rpm -q "$package" >/dev/null 2>&1; then
-        log "Installed: $package"
+        log "[ok] Installed: $package"
     else
         die "Required package was not installed: $package"
     fi
@@ -214,7 +245,7 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
 
     for package in "${OPTIONAL_PACKAGES[@]}"; do
         if rpm -q "$package" >/dev/null 2>&1; then
-            log "Installed: $package"
+            log "[ok] Installed: $package"
         else
             die "Optional package installation failed: $package"
         fi

@@ -60,7 +60,6 @@ should be installed when running interactively.
 
 Optional components include:
   - Optional packages
-  - Flatpak setup
   - HyprMod
 EOF
         exit 0

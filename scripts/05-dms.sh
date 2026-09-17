@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -24,16 +23,26 @@ command -v kitty >/dev/null 2>&1 \
 # User environment
 # ------------------------------------------------------------
 
-log "Configuring user environment..."
+log "Configuring DMS user environment..."
 
-mkdir -p "$HOME/.config/environment.d"
+DMS_ENV_DIR="$HOME/.config/environment.d"
+DMS_ENV_FILE="$DMS_ENV_DIR/90-dms.conf"
 
-cat > "$HOME/.config/environment.d/90-dms.conf" <<'EOF'
+mkdir -p "$DMS_ENV_DIR"
+
+if [[ -f "$DMS_ENV_FILE" ]]; then
+    log "Existing DMS environment file found; preserving it."
+else
+    cat > "$DMS_ENV_FILE" <<'EOF'
 QT_QPA_PLATFORM=wayland
 QT_QPA_PLATFORMTHEME=gtk3
 ELECTRON_OZONE_PLATFORM_HINT=auto
 TERMINAL=kitty
 EOF
+
+    log "Created DMS environment configuration:"
+    log "  $DMS_ENV_FILE"
+fi
 
 # ------------------------------------------------------------
 # DMS setup
@@ -47,7 +56,7 @@ dms setup headless \
     --skip-existing
 
 # ------------------------------------------------------------
-# Verify DMS configuration
+# Verify DMS Hyprland configuration
 # ------------------------------------------------------------
 
 DMS_HYPR_DIR="$HOME/.config/hypr/dms"
@@ -60,11 +69,25 @@ else
 fi
 
 # ------------------------------------------------------------
-# Systemd session note
+# Verify generated configuration files
 # ------------------------------------------------------------
 
-log "Hyprland/UWSM systemd integration is handled by the"
-log "Hyprland UWSM session and graphical-session.target."
+DMS_HYPR_FILES=(
+    binds.conf
+    colors.conf
+    layout.conf
+    outputs.conf
+    cursor.conf
+    windowrules.conf
+)
+
+for file in "${DMS_HYPR_FILES[@]}"; do
+    if [[ -f "$DMS_HYPR_DIR/$file" ]]; then
+        log "[ok] DMS generated: $file"
+    else
+        log "[warn] DMS configuration file was not generated: $file"
+    fi
+done
 
 log "DankMaterialShell configuration complete."
 
