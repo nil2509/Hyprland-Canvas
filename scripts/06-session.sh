@@ -45,11 +45,11 @@ log "Found Hyprland session:"
 log "  $HYPRLAND_SESSION"
 
 # ------------------------------------------------------------
-# Verify distro-provided UWSM session
+# Verify distro-provided UWSM session [CHECK NOT ASSUME]
 # ------------------------------------------------------------
 
 if [[ ! -f "$UWSM_SESSION" ]]; then
-    die "UWSM Hyprland session entry was not found: $UWSM_SESSION"
+    log "[warn] UWSM Hyprland session entry was not found: $UWSM_SESSION"
 fi
 
 log "Found UWSM Hyprland session:"

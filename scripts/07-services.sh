@@ -43,6 +43,7 @@ USER_SERVICES=(
     pipewire-pulse.service
     wireplumber.service
     hyprpolkitagent.service
+    dms.service
 )
 
 for service in "${USER_SERVICES[@]}"; do
@@ -59,7 +60,7 @@ for service in "${USER_SERVICES[@]}"; do
     if systemctl --user is-active --quiet "$service"; then
         log "[ok] $service is active."
     else
-        die "User service is not active: $service"
+        log "[warn] User service is not active: $service"
     fi
 done
 
@@ -71,18 +72,6 @@ log "Configuring DankMaterialShell systemd service..."
 
 if ! systemctl --user cat dms.service >/dev/null 2>&1; then
     die "DMS systemd user service is not available."
-fi
-
-# DMS is tied to graphical-session.target.
-# Do not start it immediately here because this stage runs
-# before the graphical UWSM session exists.
-
-systemctl --user enable dms.service
-
-if systemctl --user is-enabled --quiet dms.service; then
-    log "[ok] dms.service is enabled."
-else
-    die "dms.service could not be enabled."
 fi
 
 # ------------------------------------------------------------

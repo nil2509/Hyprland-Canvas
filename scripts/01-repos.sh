@@ -61,7 +61,7 @@ repo_uri() {
                 }
 
                 if ($2 == target) {
-                    print $11
+                    print $10
                     exit
                 }
             }
@@ -79,7 +79,7 @@ repo_enabled() {
                 }
 
                 if ($2 == target) {
-                    if ($5 == "Yes") {
+                    if ($4 == "Yes") {
                         found = 1
                     }
 

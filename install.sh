@@ -32,69 +32,99 @@ command -v bash >/dev/null 2>&1 \
     || die "bash is required."
 
 # ------------------------------------------------------------
-# Optional components
+# Installer options
 # ------------------------------------------------------------
 
 INSTALL_OPTIONAL=0
+NO_SNAPSHOT=0
+OPTIONAL_SPECIFIED=0
 
-case "${1:-}" in
-    --with-optional)
-        INSTALL_OPTIONAL=1
-        ;;
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --with-optional)
+            INSTALL_OPTIONAL=1
+            OPTIONAL_SPECIFIED=1
+            ;;
 
-    --without-optional)
-        INSTALL_OPTIONAL=0
-        ;;
+        --without-optional)
+            INSTALL_OPTIONAL=0
+            OPTIONAL_SPECIFIED=1
+            ;;
 
-    --help|-h)
-        cat <<'EOF'
-Usage: ./install.sh [OPTION]
+        --no-snapshot)
+            NO_SNAPSHOT=1
+            ;;
+
+        --help|-h)
+            cat <<'EOF'
+Usage: ./install.sh [OPTIONS]
 
 Options:
   --with-optional       Install optional packages and components
   --without-optional    Skip optional packages and components
+  --no-snapshot         Skip installation recovery snapshot without prompting
   -h, --help            Show this help message
 
-With no option, the installer asks whether optional components
-should be installed when running interactively.
+With no optional-package option, the installer asks whether optional
+components should be installed when running interactively.
 
 Optional components include:
   - Optional packages
   - HyprMod
+
+By default, the installer creates an installation recovery snapshot
+on the first run. On subsequent runs, it asks whether another snapshot
+should be created.
+
 EOF
-        exit 0
-        ;;
+            exit 0
+            ;;
 
-    "")
-        if [[ -t 0 && -t 1 ]]; then
-            printf '\n'
-            printf 'Install optional packages and components? [y/N]: '
-            read -r answer
+        *)
+            die "Unknown option: $1"
+            ;;
+    esac
 
-            case "$answer" in
-                [yY]|[yY][eE][sS])
-                    INSTALL_OPTIONAL=1
-                    ;;
-                *)
-                    INSTALL_OPTIONAL=0
-                    ;;
-            esac
-        else
-            log "Non-interactive execution detected; skipping optional components."
-        fi
-        ;;
+    shift
+done
 
-    *)
-        die "Unknown option: $1"
-        ;;
-esac
+# ------------------------------------------------------------
+# Optional components
+# ------------------------------------------------------------
+
+if [[ "$OPTIONAL_SPECIFIED" == "0" ]]; then
+    if [[ -r /dev/tty && -w /dev/tty ]]; then
+        printf '\n' > /dev/tty
+        printf 'Install optional packages and components? [y/N]: ' > /dev/tty
+
+        read -r answer < /dev/tty
+
+        case "$answer" in
+            [yY]|[yY][eE][sS])
+                INSTALL_OPTIONAL=1
+                ;;
+            *)
+                INSTALL_OPTIONAL=0
+                ;;
+        esac
+    else
+        log "Non-interactive execution detected; skipping optional components."
+    fi
+fi
 
 export INSTALL_OPTIONAL
+export NO_SNAPSHOT
 
 if [[ "$INSTALL_OPTIONAL" == "1" ]]; then
     log "Optional packages and components: ENABLED"
 else
     log "Optional packages and components: DISABLED"
+fi
+
+if [[ "$NO_SNAPSHOT" == "1" ]]; then
+    log "Installation recovery snapshot: DISABLED"
+else
+    log "Installation recovery snapshot: ENABLED"
 fi
 
 # ------------------------------------------------------------
@@ -194,6 +224,12 @@ if [[ "$INSTALL_OPTIONAL" == "1" ]]; then
     log "Optional:   enabled"
 else
     log "Optional:   disabled"
+fi
+
+if [[ "$NO_SNAPSHOT" == "1" ]]; then
+    log "Snapshot:   disabled"
+else
+    log "Snapshot:   enabled"
 fi
 
 log "========================================"

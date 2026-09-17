@@ -7,6 +7,18 @@ source "$SCRIPT_DIR/common.sh"
 log "Creating installation recovery snapshot..."
 
 # ------------------------------------------------------------
+# Snapshot flag
+# ------------------------------------------------------------
+
+NO_SNAPSHOT="${NO_SNAPSHOT:-0}"
+
+if [[ "$NO_SNAPSHOT" == "1" ]]; then
+    log "[info] --no-snapshot was specified."
+    log "[info] Skipping installation recovery snapshot."
+    exit 0
+fi
+
+# ------------------------------------------------------------
 # Snapper availability
 # ------------------------------------------------------------
 
@@ -33,6 +45,51 @@ fi
 log "[ok] Snapper 'root' configuration is available."
 
 # ------------------------------------------------------------
+# Snapshot state
+# ------------------------------------------------------------
+
+SNAPSHOT_STATE="$SCRIPT_DIR/../.installation-snapshot"
+
+if [[ -f "$SNAPSHOT_STATE" ]]; then
+    EXISTING_SNAPSHOT_ID="$(<"$SNAPSHOT_STATE")"
+
+    # Ensure the state file contains only a valid numeric snapshot ID.
+    if [[ "$EXISTING_SNAPSHOT_ID" =~ ^[0-9]+$ ]]; then
+
+        # Check whether the recorded snapshot still exists.
+        if sudo snapper -c root list 2>/dev/null \
+            | awk -v id="$EXISTING_SNAPSHOT_ID" \
+                '$1 == id { found=1; exit } END { exit !found }'; then
+
+            log "[ok] Existing installation snapshot found: $EXISTING_SNAPSHOT_ID"
+
+            if [[ -r /dev/tty && -w /dev/tty ]]; then
+                printf 'Create another installation recovery snapshot? [y/N] ' > /dev/tty
+                read -r CREATE_SNAPSHOT < /dev/tty
+            else
+                log "[info] Non-interactive execution detected."
+                log "[info] Keeping existing installation snapshot."
+                exit 0
+            fi
+
+            if [[ ! "$CREATE_SNAPSHOT" =~ ^[Yy]$ ]]; then
+                log "[info] Keeping existing installation snapshot."
+                log "[info] Skipping installation recovery snapshot."
+                exit 0
+            fi
+
+        else
+            log "[info] Recorded snapshot $EXISTING_SNAPSHOT_ID no longer exists."
+            log "[info] A new installation recovery snapshot will be created."
+        fi
+
+    else
+        log "[info] Snapshot state file is invalid."
+        log "[info] A new installation recovery snapshot will be created."
+    fi
+fi
+
+# ------------------------------------------------------------
 # Create snapshot
 # ------------------------------------------------------------
 
@@ -52,8 +109,9 @@ fi
 # Verify snapshot
 # ------------------------------------------------------------
 
-if sudo snapper -c root list \
-    | awk -v id="$SNAPSHOT_ID" '$1 == id { found=1 } END { exit !found }'; then
+if sudo snapper -c root list 2>/dev/null \
+    | awk -v id="$SNAPSHOT_ID" \
+        '$1 == id { found=1; exit } END { exit !found }'; then
 
     log "[ok] Installation recovery snapshot verified."
 else
@@ -61,9 +119,12 @@ else
 fi
 
 # ------------------------------------------------------------
-# Summary
+# Save snapshot state
 # ------------------------------------------------------------
 
+printf '%s\n' "$SNAPSHOT_ID" > "$SNAPSHOT_STATE"
+
+log "[ok] Installation snapshot ID saved."
 log "Created recovery snapshot: $SNAPSHOT_ID"
 log "Snapshot description: Hyprland-Canvas installation"
 log ""

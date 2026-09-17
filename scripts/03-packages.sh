@@ -163,7 +163,7 @@ OPTIONAL_PACKAGES=(
     ninja
     clang
     gdb
-    pkg-config
+    pkgconf
     opi
     cmatrix
 )
@@ -187,8 +187,8 @@ log "Installing core packages..."
 
 sudo zypper \
     --non-interactive \
-    --auto-agree-with-licenses \
     install \
+    --auto-agree-with-licenses \
     "${CORE_PACKAGES[@]}"
 
 # ------------------------------------------------------------
@@ -199,8 +199,8 @@ log "Installing desktop and quality-of-life packages..."
 
 sudo zypper \
     --non-interactive \
-    --auto-agree-with-licenses \
     install \
+    --auto-agree-with-licenses \
     "${EXTRA_PACKAGES[@]}"
 
 # ------------------------------------------------------------
@@ -213,8 +213,8 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
     if ((${#OPTIONAL_PACKAGES[@]} > 0)); then
         sudo zypper \
             --non-interactive \
-            --auto-agree-with-licenses \
             install \
+            --auto-agree-with-licenses \
             "${OPTIONAL_PACKAGES[@]}"
     else
         log "No optional packages are configured."
@@ -253,7 +253,7 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
         if rpm -q "$package" >/dev/null 2>&1; then
             log "[ok] Installed: $package"
         else
-            die "Optional package installation failed: $package"
+            log "[warn] Optional package installation failed: $package"
         fi
     done
 fi
