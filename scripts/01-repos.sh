@@ -61,7 +61,7 @@ repo_uri() {
                 }
 
                 if ($2 == target) {
-                    print $NF
+                    print $9
                     exit
                 }
             }
@@ -198,8 +198,8 @@ for alias in "${REPO_ALIASES[@]}"; do
 
     if [[ "$actual_uri" != "${REPO_URLS[$alias]}" ]]; then
         die "Repository '$alias' has an unexpected URI:
-Expected: ${REPO_URLS[$alias]}
-Actual:   $actual_uri"
+        Expected: ${REPO_URLS[$alias]}
+        Actual:   $actual_uri"
     fi
 
     log "[ok] Repository '$alias' is present, enabled, and has the expected URI."
