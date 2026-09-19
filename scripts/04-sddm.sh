@@ -27,7 +27,7 @@ log "Creating SDDM configuration directory..."
 
 sudo mkdir -p "$SDDM_CONF_DIR"
 
-log "Writing SDDM Wayland configuration..."
+log "Writing SDDM X11 configuration..."
 
 sudo tee "$SDDM_CONF" >/dev/null <<'EOF'
 [General]
@@ -56,10 +56,10 @@ sudo systemctl set-default graphical.target
 
 log "Verifying SDDM configuration..."
 
-if sudo grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
-    log "[ok] SDDM greeter is configured to use Wayland."
+if sudo grep -q '^DisplayServer=x11$' "$SDDM_CONF"; then
+    log "[ok] SDDM greeter is configured to use X11."
 else
-    die "Failed to configure SDDM Wayland display server."
+    die "Failed to configure SDDM X11 display server."
 fi
 
 # ------------------------------------------------------------

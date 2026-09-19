@@ -26,10 +26,6 @@ CORE_PACKAGES=(
     xwayland
     xorg-x11-server
 
-    # Quickshell
-    quickshell
-    cliphist
-
     # Terminal
     kitty
 
@@ -65,6 +61,7 @@ CORE_PACKAGES=(
     # Shell / development tools
     zsh
     cargo
+    cliphist
 
     # Download / archive utilities
     curl
@@ -185,9 +182,28 @@ log "Installing core packages..."
 sudo zypper \
     --non-interactive \
     install \
-    --no-recommends \
     --auto-agree-with-licenses \
     "${CORE_PACKAGES[@]}"
+
+# --------------------------------------------------------
+# QuickShell
+# --------------------------------------------------------
+
+if rpm -q noctalia-qs >/dev/null 2>&1; then
+    log "Conflicting package 'noctalia-qs' is installed. Removing it..."
+
+    sudo zypper \
+        --non-interactive \
+        remove \
+        noctalia-qs
+fi
+
+log "Installing QuickShell..."
+
+sudo zypper \
+    --non-interactive \
+    install \
+    quickshell
 
 # ------------------------------------------------------------
 # Install extra desktop packages
@@ -198,7 +214,6 @@ log "Installing desktop and quality-of-life packages..."
 sudo zypper \
     --non-interactive \
     install \
-    --no-recommends \
     --auto-agree-with-licenses \
     "${EXTRA_PACKAGES[@]}"
 
@@ -213,7 +228,6 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
         sudo zypper \
             --non-interactive \
             install \
-            --no-recommends \
             --auto-agree-with-licenses \
             "${OPTIONAL_PACKAGES[@]}"
     else
@@ -221,6 +235,19 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
     fi
 else
     log "Skipping optional packages."
+fi
+
+# --------------------------------------------------------
+# Remove unwanted packages
+# --------------------------------------------------------
+
+if rpm -q konsole >/dev/null 2>&1; then
+    log "Unwanted package 'konsole' is installed. Removing it..."
+
+    sudo zypper \
+        --non-interactive \
+        remove \
+        konsole
 fi
 
 # ------------------------------------------------------------

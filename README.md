@@ -91,17 +91,18 @@ Hyprland-Canvas/
 │   ├── common.sh
 │   ├── 00-preflight.sh
 │   ├── 01-snapshot.sh
-│   ├── 02-packages.sh
-│   ├── 03-sddm.sh
-│   ├── 04-session.sh
-│   ├── 05-services.sh
-│   ├── 06-zram.sh
+│   ├── 02-repos.sh
+│   ├── 03-packages.sh
+│   ├── 04-sddm.sh
+│   ├── 05-session.sh
+│   ├── 06-services.sh
+│   ├── 07-zram.sh
 │   ├── 07-user_dirs.sh
-│   ├── 08-cargos.sh
-│   ├── 09-shell.sh
-│   ├── 10-kitty.sh
-│   ├── 11-flatpak.sh
-│   ├── 12-hyprmod.sh
+│   ├── 09-cargos.sh
+│   ├── 10-shell.sh
+│   ├── 11-kitty.sh
+│   ├── 12-flatpak.sh
+│   ├── 13-hyprmod.sh
 │   └── 99-verify.sh
 │
 ├── config/
@@ -120,27 +121,29 @@ The installer runs the following stages in order:
       ↓
 01-snapshot
       ↓
-02-packages
+02-repos
       ↓
-03-sddm
+03-packages
       ↓
-04-session
+04-sddm
       ↓
-05-services
+05-session
       ↓
-06-zram
+06-services
       ↓
-07-user_dirs
+07-zram
       ↓
-08-cargos
+08-user_dirs
       ↓
-09-shell
+09-cargos
       ↓
-10-kitty
+10-shell
       ↓
-11-flatpak
+11-kitty
       ↓
-12-hyprmod
+12-flatpak
+      ↓
+13-hyprmod
       ↓
 99-verify
 ```

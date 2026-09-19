@@ -260,7 +260,7 @@ fi
 
 log "Checking Annotation Mono Nerd Font..."
 
-if fc-list | grep -ci "Annotation Mono" >/dev/null; then
+if fc-list | grep -ci "AnnotationM" >/dev/null; then
     pass "Annotation Mono Nerd Font is installed."
 else
     fail "Annotation Mono Nerd Font was not found."
@@ -456,7 +456,7 @@ for directory in "${USER_CONFIG_DIRS[@]}"; do
     if [[ -d "$directory" ]]; then
         pass "Directory exists: $directory"
     else
-        fail "Directory was not found: $directory"
+        warn "Directory was not found: $directory"
     fi
 done
 

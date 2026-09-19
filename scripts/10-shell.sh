@@ -81,13 +81,6 @@ FONT_NAME="AnnotationMono"
 FONT_DIR="$HOME/.local/share/fonts/$FONT_NAME"
 FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/v${FONT_VERSION}/${FONT_NAME}.zip"
 
-echo "=== FONT DEBUG ==="
-echo "HOME=$HOME"
-echo "USER=$USER"
-command -v fc-list
-fc-list | grep -i "AnnotationM" || true
-echo "=================="
-
 if fc-list | grep -ci "AnnotationM" >/dev/null; then
     log "[ok] Annotation Mono Nerd Font is already installed."
 else

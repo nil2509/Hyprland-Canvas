@@ -35,22 +35,22 @@ fi
 # Warehouse
 # ------------------------------------------------------------
 
-WAREHOUSE_FLATPAK="$SCRIPT_DIR/../flatpaks/io.github.flattool.Warehouse.flatpak"
-
-if [[ -f "$WAREHOUSE_FLATPAK" ]]; then
+if flatpak info --system io.github.flattool.Warehouse >/dev/null; then
+    log "Warehouse is already installed"
+else
+    log "Warehouse not found"
     log "Installing Warehouse..."
 
     sudo flatpak --system install \
         --noninteractive \
-        "$WAREHOUSE_FLATPAK"
+        flathub \
+        io.github.flattool.Warehouse
 
     if sudo flatpak info --system io.github.flattool.Warehouse >/dev/null 2>&1; then
         log "[ok] Warehouse is installed."
     else
         die "Warehouse installation could not be verified."
     fi
-else
-    die "Warehouse Flatpak bundle was not found: $WAREHOUSE_FLATPAK"
 fi
 
 # ------------------------------------------------------------
