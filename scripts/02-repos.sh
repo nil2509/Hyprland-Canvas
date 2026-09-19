@@ -2,7 +2,7 @@
 
 # ============================================================
 # openSUSE Hyprland Desktop Bootstrap
-# 01-repos.sh
+# 02-repos.sh
 # ============================================================
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,11 +16,11 @@ log "Configuring additional repositories..."
 # ------------------------------------------------------------
 
 REPO_ALIASES=(
-    "danklinux"
+    "home_AvengeMedia_danklinux"
 )
 
 declare -A REPO_URLS=(
-    [danklinux]="https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/openSUSE_Tumbleweed/"
+    [home_AvengeMedia_danklinux]="https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/openSUSE_Tumbleweed/"
 )
 
 # ------------------------------------------------------------
@@ -35,6 +35,7 @@ repo_exists() {
             NR > 2 {
                 alias = $2
                 gsub(/^[[:space:]]+|[[:space:]]+$/, "", alias)
+
                 if (alias == target) {
                     found = 1
                     exit
@@ -55,6 +56,7 @@ repo_uri() {
                 for (i = 1; i <= NF; i++) {
                     gsub(/^[[:space:]]+|[[:space:]]+$/, "", $i)
                 }
+
                 if ($2 == target) {
                     print $10
                     exit
@@ -72,6 +74,7 @@ repo_enabled() {
                 for (i = 1; i <= NF; i++) {
                     gsub(/^[[:space:]]+|[[:space:]]+$/, "", $i)
                 }
+
                 if ($2 == target) {
                     if ($4 == "Yes") {
                         found = 1
@@ -134,6 +137,7 @@ add_repo() {
         --gpg-auto-import-keys \
         addrepo \
         --refresh \
+        --alias "$alias" \
         "$uri"
 
     log "[ok] Repository '$alias' added."
@@ -151,6 +155,11 @@ command -v zypper >/dev/null 2>&1 \
 # ------------------------------------------------------------
 
 for alias in "${REPO_ALIASES[@]}"; do
+
+    if [[ -z "${REPO_URLS[$alias]+x}" ]]; then
+        die "No repository URI defined for alias '$alias'."
+    fi
+
     add_repo "$alias" "${REPO_URLS[$alias]}"
 done
 
@@ -173,6 +182,10 @@ log "Verifying configured repositories..."
 
 for alias in "${REPO_ALIASES[@]}"; do
 
+    if [[ -z "${REPO_URLS[$alias]+x}" ]]; then
+        die "No repository URI defined for alias '$alias'."
+    fi
+
     if ! repo_exists "$alias"; then
         die "Repository '$alias' was not found after configuration."
     fi
@@ -181,6 +194,7 @@ for alias in "${REPO_ALIASES[@]}"; do
         die "Repository '$alias' is not enabled."
     fi
 
+    actual_uri=""
     actual_uri="$(repo_uri "$alias")"
 
     if [[ -z "$actual_uri" ]]; then
