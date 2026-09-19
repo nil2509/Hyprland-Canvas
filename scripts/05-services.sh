@@ -43,7 +43,6 @@ USER_SERVICES=(
     pipewire-pulse.service
     wireplumber.service
     hyprpolkitagent.service
-    dms.service
 )
 
 for service in "${USER_SERVICES[@]}"; do
@@ -65,35 +64,9 @@ for service in "${USER_SERVICES[@]}"; do
 done
 
 # ------------------------------------------------------------
-# DankMaterialShell
-# ------------------------------------------------------------
-
-log "Configuring DankMaterialShell systemd service..."
-
-if ! systemctl --user cat dms.service >/dev/null 2>&1; then
-    die "DMS systemd user service is not available."
-fi
-
-# ------------------------------------------------------------
-# Verify DMS session integration
-# ------------------------------------------------------------
-
-DMS_WANTS_DIR="$HOME/.config/systemd/user/graphical-session.target.wants"
-DMS_WANTS_LINK="$DMS_WANTS_DIR/dms.service"
-
-if [[ -L "$DMS_WANTS_LINK" ]]; then
-    log "[ok] dms.service is attached to graphical-session.target."
-else
-    die "dms.service is not attached to graphical-session.target."
-fi
-
-# ------------------------------------------------------------
 # Summary
 # ------------------------------------------------------------
 
 log "System and user services configured successfully."
-log ""
-log "DMS will start with the UWSM-managed graphical session."
-log "It is intentionally not started immediately by this stage."
 
 exit 0

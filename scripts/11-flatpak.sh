@@ -19,23 +19,45 @@ command -v flatpak >/dev/null 2>&1 \
 
 log "Configuring the Flathub remote..."
 
-flatpak remote-add --system --if-not-exists \
+sudo flatpak remote-add --system --if-not-exists \
     flathub \
     https://dl.flathub.org/repo/flathub.flatpakrepo
 
 log "Verifying the Flathub remote..."
 
-if flatpak remotes --system --columns=name | grep -qx "flathub"; then
+if sudo flatpak remotes --system --columns=name | grep -qx "flathub"; then
     log "[ok] Flathub remote is configured."
 else
     die "Flathub remote was not configured."
 fi
 
 # ------------------------------------------------------------
+# Warehouse
+# ------------------------------------------------------------
+
+WAREHOUSE_FLATPAK="$SCRIPT_DIR/../flatpaks/io.github.flattool.Warehouse.flatpak"
+
+if [[ -f "$WAREHOUSE_FLATPAK" ]]; then
+    log "Installing Warehouse..."
+
+    sudo flatpak --system install \
+        --noninteractive \
+        "$WAREHOUSE_FLATPAK"
+
+    if sudo flatpak info --system io.github.flattool.Warehouse >/dev/null 2>&1; then
+        log "[ok] Warehouse is installed."
+    else
+        die "Warehouse installation could not be verified."
+    fi
+else
+    die "Warehouse Flatpak bundle was not found: $WAREHOUSE_FLATPAK"
+fi
+
+# ------------------------------------------------------------
 # Final verification
 # ------------------------------------------------------------
 
-if flatpak remotes --system >/dev/null 2>&1; then
+if sudo flatpak remotes --system >/dev/null 2>&1; then
     log "[ok] Flatpak system installation is accessible."
 else
     die "Flatpak system installation could not be queried."

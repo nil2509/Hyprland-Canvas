@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ============================================================
-# openSUSE Tumbleweed + Hyprland + UWSM + DMS
+# openSUSE Tumbleweed + Hyprland + UWSM
 # Bootstrap Installer
 # ============================================================
 
@@ -177,20 +177,18 @@ chmod +x "$SCRIPT_DIR/install.sh" 2>/dev/null || true
 
 STAGES=(
     "00-preflight.sh"
-    "01-repos.sh"
-    "02-snapshot.sh"
-    "03-packages.sh"
-    "04-sddm.sh"
-    "05-dms.sh"
-    "06-session.sh"
-    "07-services.sh"
-    "08-zram.sh"
-    "09-user_dirs.sh"
-    "10-cargos.sh"
-    "11-shell.sh"
-    "12-kitty.sh"
-    "13-flatpak.sh"
-    "14-hyprmod.sh"
+    "01-snapshot.sh"
+    "02-packages.sh"
+    "03-sddm.sh"
+    "04-session.sh"
+    "05-services.sh"
+    "06-zram.sh"
+    "07-user_dirs.sh"
+    "08-cargos.sh"
+    "09-shell.sh"
+    "10-kitty.sh"
+    "11-flatpak.sh"
+    "12-hyprmod.sh"
     "99-verify.sh"
 )
 

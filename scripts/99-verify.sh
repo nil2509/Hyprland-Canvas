@@ -34,7 +34,6 @@ log "Checking required commands..."
 REQUIRED_COMMANDS=(
     Hyprland
     uwsm
-    dms
     quickshell
     kitty
     sddm
@@ -62,7 +61,7 @@ done
 
 log "Checking SDDM configuration..."
 
-SDDM_CONF="/etc/sddm.conf.d/10-hyprland.conf"
+SDDM_CONF="/etc/sddm.conf.d/x11.conf"
 
 if [[ -f "$SDDM_CONF" ]]; then
     pass "SDDM configuration exists: $SDDM_CONF"
@@ -71,10 +70,10 @@ else
 fi
 
 if [[ -f "$SDDM_CONF" ]] && \
-    sudo grep -q '^DisplayServer=wayland$' "$SDDM_CONF"; then
-    pass "SDDM is configured to use Wayland."
+    sudo grep -q '^DisplayServer=x11$' "$SDDM_CONF"; then
+    pass "SDDM is configured to use X11."
 else
-    fail "SDDM Wayland configuration is missing."
+    fail "SDDM X11 configuration is missing."
 fi
 
 if sudo systemctl is-enabled --quiet sddm.service; then
@@ -134,99 +133,6 @@ if [[ -f "$UWSM_SESSION" ]] && \
     pass "UWSM session is an Application entry."
 else
     fail "UWSM session is missing Type=Application."
-fi
-
-# ------------------------------------------------------------
-# DMS environment
-# ------------------------------------------------------------
-
-log "Checking DankMaterialShell environment..."
-
-DMS_ENV_DIR="$HOME/.config/environment.d"
-DMS_ENV_FILE="$DMS_ENV_DIR/90-dms.conf"
-
-if [[ -d "$DMS_ENV_DIR" ]]; then
-    pass "User environment.d directory exists."
-else
-    fail "User environment.d directory was not found."
-fi
-
-if [[ -f "$DMS_ENV_FILE" ]]; then
-    pass "DMS environment configuration exists."
-else
-    fail "DMS environment configuration was not found."
-fi
-
-if [[ -f "$DMS_ENV_FILE" ]] && \
-    grep -q '^QT_QPA_PLATFORM=wayland$' "$DMS_ENV_FILE"; then
-    pass "QT_QPA_PLATFORM=wayland is configured."
-else
-    fail "QT_QPA_PLATFORM=wayland is missing."
-fi
-
-if [[ -f "$DMS_ENV_FILE" ]] && \
-    grep -q '^TERMINAL=kitty$' "$DMS_ENV_FILE"; then
-    pass "TERMINAL=kitty is configured."
-else
-    fail "TERMINAL=kitty is missing."
-fi
-
-# ------------------------------------------------------------
-# DMS Hyprland configuration
-# ------------------------------------------------------------
-
-log "Checking DMS Hyprland configuration..."
-
-DMS_HYPR_DIR="$HOME/.config/hypr/dms"
-
-if [[ -d "$DMS_HYPR_DIR" ]]; then
-    pass "DMS Hyprland configuration directory exists."
-else
-    fail "DMS Hyprland configuration directory was not found."
-fi
-
-DMS_HYPR_FILES=(
-    binds.conf
-    colors.conf
-    layout.conf
-    outputs.conf
-    cursor.conf
-    windowrules.conf
-)
-
-for file in "${DMS_HYPR_FILES[@]}"; do
-    if [[ -f "$DMS_HYPR_DIR/$file" ]]; then
-        pass "DMS generated $file."
-    else
-        warn "DMS configuration file was not generated: $file"
-    fi
-done
-
-# ------------------------------------------------------------
-# DMS systemd service
-# ------------------------------------------------------------
-
-log "Checking DMS user service..."
-
-if systemctl --user cat dms.service >/dev/null 2>&1; then
-    pass "DMS user service is installed."
-else
-    fail "DMS user service is not available."
-fi
-
-if systemctl --user is-enabled --quiet dms.service; then
-    pass "DMS user service is enabled."
-else
-    fail "DMS user service is not enabled."
-fi
-
-DMS_WANTS_DIR="$HOME/.config/systemd/user/graphical-session.target.wants"
-DMS_WANTS_LINK="$DMS_WANTS_DIR/dms.service"
-
-if [[ -L "$DMS_WANTS_LINK" ]]; then
-    pass "DMS is attached to graphical-session.target."
-else
-    fail "DMS is not attached to graphical-session.target."
 fi
 
 # ------------------------------------------------------------
@@ -542,7 +448,6 @@ log "Checking user configuration directories..."
 
 USER_CONFIG_DIRS=(
     "$HOME/.config/hypr"
-    "$HOME/.config/hypr/dms"
     "$HOME/.config/environment.d"
     "$HOME/.config/kitty"
 )

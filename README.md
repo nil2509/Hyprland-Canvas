@@ -1,6 +1,6 @@
 # Hyprland-Canvas
 
-A minimal, reproducible **openSUSE Tumbleweed + Hyprland + UWSM + DankMaterialShell** desktop bootstrap.
+A minimal, reproducible **openSUSE Tumbleweed + Hyprland + UWSM** desktop bootstrap.
 
 This project is intentionally **not a finished rice**. It provides a clean, functional system foundation and leaves `config/` as a blank canvas for building your own Hyprland and DankMaterialShell configuration.
 
@@ -13,7 +13,6 @@ The bootstrap sets up:
 * openSUSE Tumbleweed
 * Hyprland
 * UWSM
-* DankMaterialShell (DMS)
 * Quickshell
 * SDDM
 * Kitty
@@ -91,20 +90,18 @@ Hyprland-Canvas/
 ├── scripts/
 │   ├── common.sh
 │   ├── 00-preflight.sh
-│   ├── 01-repos.sh
-│   ├── 02-snapshot.sh
-│   ├── 03-packages.sh
-│   ├── 04-sddm.sh
-│   ├── 05-dms.sh
-│   ├── 06-session.sh
-│   ├── 07-services.sh
-│   ├── 08-zram.sh
-│   ├── 09-user_dirs.sh
-│   ├── 10-cargos.sh
-│   ├── 11-shell.sh
-│   ├── 12-kitty.sh
-│   ├── 13-flatpak.sh
-│   ├── 14-hyprmod.sh
+│   ├── 01-snapshot.sh
+│   ├── 02-packages.sh
+│   ├── 03-sddm.sh
+│   ├── 04-session.sh
+│   ├── 05-services.sh
+│   ├── 06-zram.sh
+│   ├── 07-user_dirs.sh
+│   ├── 08-cargos.sh
+│   ├── 09-shell.sh
+│   ├── 10-kitty.sh
+│   ├── 11-flatpak.sh
+│   ├── 12-hyprmod.sh
 │   └── 99-verify.sh
 │
 ├── config/
@@ -121,33 +118,29 @@ The installer runs the following stages in order:
 ```text
 00-preflight
       ↓
-01-repos
+01-snapshot
       ↓
-02-snapshot
+02-packages
       ↓
-03-packages
+03-sddm
       ↓
-04-sddm
+04-session
       ↓
-05-dms
+05-services
       ↓
-06-session
+06-zram
       ↓
-07-services
+07-user_dirs
       ↓
-08-zram
+08-cargos
       ↓
-09-user_dirs
+09-shell
       ↓
-10-cargos
+10-kitty
       ↓
-11-shell
+11-flatpak
       ↓
-12-kitty
-      ↓
-13-flatpak
-      ↓
-14-hyprmod
+12-hyprmod
       ↓
 99-verify
 ```
@@ -204,7 +197,7 @@ Depending on the selected installer option:
 * Development tools
 * HyprMod
 
-Flatpak and Flathub are **not optional**. They are part of the core system foundation and are configured by `13-flatpak.sh` on every installation.
+Flatpak and Flathub are **not optional**. They are part of the core system foundation and are configured by `11-flatpak.sh` on every installation.
 
 ---
 
@@ -230,54 +223,6 @@ HyprMod remains separate from the core desktop foundation and is therefore skipp
 
 ---
 
-# DMS architecture
-
-DankMaterialShell is the primary desktop shell for this setup.
-
-DMS is built on Quickshell and supports Hyprland as a compositor. Its current documentation describes DMS as a complete desktop shell rather than simply a panel.
-
-The intended architecture is therefore:
-
-```text
-                 SDDM
-                  │
-                  ▼
-             UWSM session
-                  │
-                  ▼
-              Hyprland
-                  │
-          ┌───────┴───────┐
-          │               │
-          ▼               ▼
-      Quickshell          DMS
-                          │
-        ┌─────────────────┼──────────────────┐
-        │                 │                  │
-        ▼                 ▼                  ▼
-       Bar             Launcher          Notifications
-        │
-        ├────────────── Session / Lock
-        │
-        ├────────────── Power controls
-        │
-        ├────────────── Network controls
-        │
-        └────────────── Bluetooth controls
-```
-
-DMS generates its Hyprland integration under:
-
-```text
-~/.config/hypr/dms/
-```
-
-and provides the shell-side desktop functionality.
-
-The project intentionally does not add another bar, notification daemon, lock screen, or idle daemon alongside DMS.
-
----
-
 # Session management
 
 The login/session stack is:
@@ -286,9 +231,6 @@ The login/session stack is:
 SDDM
  ↓
 Hyprland (UWSM session)
- ↓
-DMS / Quickshell
-```
 
 The installer verifies the Hyprland UWSM Wayland session provided by the installed Hyprland/UWSM integration.
 
@@ -323,8 +265,6 @@ wireplumber.service
 ```
 
 These are backend services. They are not intended to be replaced by shell-specific applets.
-
-DMS is attached to the graphical user session and is started through the systemd graphical-session lifecycle rather than being manually launched as a normal system service during installation.
 
 ---
 
@@ -445,7 +385,7 @@ The bootstrap installs Flatpak and configures the system Flathub remote.
 The configuration is handled by:
 
 ```text
-13-flatpak.sh
+11-flatpak.sh
 ```
 
 The installer does not install specific Flatpak applications. It simply provides the Flatpak foundation and Flathub repository so applications can be installed later.
@@ -478,7 +418,6 @@ You can build your own:
 
 ```text
 Hyprland
-DMS
 Quickshell
 Kitty
 GTK
@@ -506,8 +445,6 @@ It checks the resulting installation for things such as:
 * Graphical target
 * Hyprland session
 * UWSM session
-* DMS environment
-* DMS Hyprland configuration
 * XDG user directories
 * Cargo-installed tools
 * `pokeget`

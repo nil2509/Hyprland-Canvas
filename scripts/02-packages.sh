@@ -24,15 +24,11 @@ CORE_PACKAGES=(
     hyprsunset
     uwsm
     xwayland
-    weston
     xorg-x11-server
 
-    # DankMaterialShell
+    # Quickshell
     quickshell
-    dgop
-    danksearch
     cliphist
-    dms
 
     # Terminal
     kitty
@@ -69,7 +65,6 @@ CORE_PACKAGES=(
     # Shell / development tools
     zsh
     cargo
-    git
 
     # Download / archive utilities
     curl

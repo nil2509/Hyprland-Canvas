@@ -21,7 +21,7 @@ command -v systemctl >/dev/null 2>&1 \
 # ------------------------------------------------------------
 
 SDDM_CONF_DIR="/etc/sddm.conf.d"
-SDDM_CONF="$SDDM_CONF_DIR/10-hyprland.conf"
+SDDM_CONF="$SDDM_CONF_DIR/x11.conf"
 
 log "Creating SDDM configuration directory..."
 
@@ -31,7 +31,7 @@ log "Writing SDDM Wayland configuration..."
 
 sudo tee "$SDDM_CONF" >/dev/null <<'EOF'
 [General]
-DisplayServer=wayland
+DisplayServer=x11
 EOF
 
 # ------------------------------------------------------------
