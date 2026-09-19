@@ -88,7 +88,7 @@ command -v fc-list
 fc-list | grep -i "AnnotationM" || true
 echo "=================="
 
-if fc-list | grep -qi "AnnotationM"; then
+if fc-list | grep -ci "AnnotationM" >/dev/null; then
     log "[ok] Annotation Mono Nerd Font is already installed."
 else
     log "Installing Annotation Mono Nerd Font..."
@@ -111,7 +111,7 @@ else
 
     fc-cache -f "$HOME/.local/share/fonts"
 
-    if fc-list | grep -qi "AnnotationM"; then
+    if fc-list | grep -ci "AnnotationM" >/dev/null; then
         log "[ok] Annotation Mono Nerd Font installed."
     else
         die "Annotation Mono Nerd Font installation failed."

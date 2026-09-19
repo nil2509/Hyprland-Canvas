@@ -354,7 +354,7 @@ fi
 
 log "Checking Annotation Mono Nerd Font..."
 
-if fc-list | grep -qi "Annotation Mono"; then
+if fc-list | grep -ci "Annotation Mono" >/dev/null; then
     pass "Annotation Mono Nerd Font is installed."
 else
     fail "Annotation Mono Nerd Font was not found."

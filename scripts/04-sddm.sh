@@ -89,19 +89,33 @@ else
 fi
 
 # ------------------------------------------------------------
-# Verify Hyprland UWSM session
+# UWSM Hyprland session
 #
-# Hyprland provides the UWSM-managed session entry.
-# 06-session.sh performs the detailed verification.
+# openSUSE's Hyprland package provides hyprland.desktop, but
+# does not provide a separate UWSM-managed session entry.
+# Create the UWSM session explicitly for SDDM.
 # ------------------------------------------------------------
 
 UWSM_SESSION="/usr/share/wayland-sessions/hyprland-uwsm.desktop"
 
+# ------------------------------------------------------------
+# Create hyprland-uwsm.desktop if it doesnt exist
+# ------------------------------------------------------------
+
 if [[ -f "$UWSM_SESSION" ]]; then
-    log "[ok] UWSM-managed Hyprland session entry exists."
+    log "[ok] UWSM-managed Hyprland session entry already exists."
 else
-    log "[info] UWSM-managed Hyprland session entry is not present yet."
-    log "       06-session.sh will perform the definitive session check."
+    log "Creating UWSM-managed Hyprland session entry..."
+
+    sudo tee "$UWSM_SESSION" >/dev/null <<'EOF'
+[Desktop Entry]
+Name=Hyprland (uwsm-managed)
+Comment=Hyprland session managed by UWSM
+Exec=uwsm start hyprland.desktop
+TryExec=uwsm
+Type=Application
+DesktopNames=Hyprland
+EOF
 fi
 
 # ------------------------------------------------------------

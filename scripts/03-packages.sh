@@ -24,6 +24,8 @@ CORE_PACKAGES=(
     hyprsunset
     uwsm
     xwayland
+    weston
+    xorg-x11-server
 
     # DankMaterialShell
     quickshell
@@ -188,6 +190,7 @@ log "Installing core packages..."
 sudo zypper \
     --non-interactive \
     install \
+    --no-recommends \
     --auto-agree-with-licenses \
     "${CORE_PACKAGES[@]}"
 
@@ -200,6 +203,7 @@ log "Installing desktop and quality-of-life packages..."
 sudo zypper \
     --non-interactive \
     install \
+    --no-recommends \
     --auto-agree-with-licenses \
     "${EXTRA_PACKAGES[@]}"
 
@@ -214,6 +218,7 @@ if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
         sudo zypper \
             --non-interactive \
             install \
+            --no-recommends \
             --auto-agree-with-licenses \
             "${OPTIONAL_PACKAGES[@]}"
     else
