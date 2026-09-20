@@ -587,9 +587,6 @@ openSUSE Tumbleweed
    UWSM + Hyprland
         │
         ▼
- DankMaterialShell
-        │
-        ▼
      Your config
 ```
 
