@@ -30,7 +30,6 @@ The bootstrap sets up:
 * Wayland/XDG desktop integration
 * AMD graphics/Vulkan support
 * Flatpak + Flathub
-* Optional HyprMod integration
 
 DMS provides the desktop shell layer, including the bar, launcher, notifications, session/lock functionality, and system controls. DMS is designed to replace the collection of traditional components normally used for these functions.
 
@@ -102,7 +101,6 @@ Hyprland-Canvas/
 │   ├── 10-shell.sh
 │   ├── 11-kitty.sh
 │   ├── 12-flatpak.sh
-│   ├── 13-hyprmod.sh
 │   └── 99-verify.sh
 │
 ├── config/
@@ -142,8 +140,6 @@ The installer runs the following stages in order:
 11-kitty
       ↓
 12-flatpak
-      ↓
-13-hyprmod
       ↓
 99-verify
 ```
@@ -198,31 +194,8 @@ Depending on the selected installer option:
 
 * Additional command-line utilities
 * Development tools
-* HyprMod
 
 Flatpak and Flathub are **not optional**. They are part of the core system foundation and are configured by `11-flatpak.sh` on every installation.
-
----
-
-# HyprMod
-
-HyprMod is an optional Hyprland settings application.
-
-When optional components are enabled, the installer uses the current upstream HyprMod installer and then registers its desktop entry.
-
-The upstream installation method is:
-
-```bash
-curl -LsSf https://raw.githubusercontent.com/BlueManCZ/hyprmod/main/install.sh | sh
-```
-
-followed by:
-
-```bash
-hyprmod --install
-```
-
-HyprMod remains separate from the core desktop foundation and is therefore skipped when optional components are disabled.
 
 ---
 
@@ -283,7 +256,7 @@ with:
 
 ```ini
 [zram0]
-zram-size = ram / 2
+zram-size = (ram / 2, 4096)
 compression-algorithm = zstd
 ```
 
@@ -467,7 +440,6 @@ It checks the resulting installation for things such as:
 * Hyprland systemd session integration
 * Flatpak
 * Flathub
-* Optional HyprMod
 * Required user configuration directories
 
 The verifier distinguishes between:

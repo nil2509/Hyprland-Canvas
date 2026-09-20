@@ -68,10 +68,6 @@ Options:
 With no optional-package option, the installer asks whether optional
 components should be installed when running interactively.
 
-Optional components include:
-  - Optional packages
-  - HyprMod
-
 By default, the installer creates an installation recovery snapshot
 on the first run. On subsequent runs, it asks whether another snapshot
 should be created.
@@ -189,7 +185,6 @@ STAGES=(
     "10-shell.sh"
     "11-kitty.sh"
     "12-flatpak.sh"
-    "13-hyprmod.sh"
     "99-verify.sh"
 )
 

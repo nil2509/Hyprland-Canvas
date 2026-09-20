@@ -413,34 +413,6 @@ else
 fi
 
 # ------------------------------------------------------------
-# Optional HyprMod
-# ------------------------------------------------------------
-
-log "Checking optional components..."
-
-if [[ "${INSTALL_OPTIONAL:-0}" == "1" ]]; then
-
-    if command -v hyprmod >/dev/null 2>&1; then
-        pass "HyprMod is installed."
-
-        XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-        HYPRMOD_DESKTOP="$XDG_DATA_HOME/applications/hyprmod.desktop"
-
-        if [[ -f "$HYPRMOD_DESKTOP" ]]; then
-            pass "HyprMod desktop entry exists."
-        else
-            warn "HyprMod desktop entry was not found."
-        fi
-    else
-        fail "HyprMod was requested but is not installed."
-    fi
-
-else
-    log "Optional components were not requested."
-    log "Skipping HyprMod verification."
-fi
-
-# ------------------------------------------------------------
 # User configuration directories
 # ------------------------------------------------------------
 
